@@ -319,4 +319,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-Made with ❤️ for developers using Claude Code
+Made with ❤️ for developers
