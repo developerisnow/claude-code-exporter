@@ -1,0 +1,141 @@
+#!/usr/bin/env node
+
+const ClaudePromptExporter = require('../lib/index');
+const path = require('path');
+const fs = require('fs');
+
+const HELP_TEXT = `
+Claude Code Prompt Exporter v${ClaudePromptExporter.getVersion()}
+
+Export your Claude Code session prompts to markdown files.
+
+USAGE:
+  claude-prompts [options] [project-path] [output-dir]
+
+ARGUMENTS:
+  project-path    Path to your project (default: current directory)
+  output-dir      Output directory for markdown files (default: ./claude-prompts)
+
+OPTIONS:
+  -h, --help      Show this help message
+  -v, --version   Show version number
+  -V, --verbose   Enable verbose output
+  --list          List available sessions without exporting
+
+EXAMPLES:
+  claude-prompts                              # Export from current directory
+  claude-prompts /path/to/project            # Export from specific project
+  claude-prompts . ./exports                 # Export to custom directory
+  claude-prompts --list /path/to/project     # List sessions only
+  claude-prompts -V /path/to/project         # Verbose output
+
+For more information, visit: https://github.com/yourusername/claude-code-exporter
+`;
+
+function parseArgs(args) {
+  const options = {
+    help: false,
+    version: false,
+    verbose: false,
+    list: false,
+    projectPath: process.cwd(),
+    outputDir: './claude-prompts'
+  };
+
+  const positionalArgs = [];
+
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+
+    if (arg === '-h' || arg === '--help') {
+      options.help = true;
+    } else if (arg === '-v' || arg === '--version') {
+      options.version = true;
+    } else if (arg === '-V' || arg === '--verbose') {
+      options.verbose = true;
+    } else if (arg === '--list') {
+      options.list = true;
+    } else if (!arg.startsWith('-')) {
+      positionalArgs.push(arg);
+    }
+  }
+
+  // Assign positional arguments
+  if (positionalArgs.length > 0) {
+    options.projectPath = positionalArgs[0];
+  }
+  if (positionalArgs.length > 1) {
+    options.outputDir = positionalArgs[1];
+  }
+
+  return options;
+}
+
+function main() {
+  const args = process.argv.slice(2);
+  const options = parseArgs(args);
+
+  if (options.help) {
+    console.log(HELP_TEXT);
+    process.exit(0);
+  }
+
+  if (options.version) {
+    console.log(`claude-code-exporter v${ClaudePromptExporter.getVersion()}`);
+    process.exit(0);
+  }
+
+  console.log('Claude Code Prompt Exporter\n');
+
+  try {
+    // Resolve paths
+    const projectPath = path.resolve(options.projectPath);
+    const outputDir = path.resolve(options.outputDir);
+
+    // Validate project path exists
+    if (!fs.existsSync(projectPath)) {
+      throw new Error(`Project path does not exist: ${projectPath}`);
+    }
+
+    console.log(`Project: ${projectPath}`);
+    
+    const exporter = new ClaudePromptExporter(projectPath, { 
+      verbose: options.verbose 
+    });
+
+    if (options.list) {
+      // List mode - just show available sessions
+      const sessions = exporter.extractPrompts();
+      console.log(`\nFound ${sessions.length} session(s) with prompts:\n`);
+      
+      sessions.forEach(({ sessionId, prompts }) => {
+        const firstPrompt = prompts[0].content.split('\n')[0].slice(0, 60) + '...';
+        console.log(`  ${sessionId}`);
+        console.log(`    Prompts: ${prompts.length}`);
+        console.log(`    First: "${firstPrompt}"`);
+        console.log();
+      });
+    } else {
+      // Export mode
+      console.log(`Output:  ${outputDir}\n`);
+      const result = exporter.exportToMarkdown(outputDir);
+      
+      if (result.sessionsExported === 0) {
+        console.log('\nNo sessions found to export.');
+      }
+    }
+
+  } catch (error) {
+    console.error(`\nError: ${error.message}`);
+    
+    if (options.verbose && error.stack) {
+      console.error('\nStack trace:');
+      console.error(error.stack);
+    }
+    
+    process.exit(1);
+  }
+}
+
+// Run the CLI
+main();

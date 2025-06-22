@@ -1,0 +1,22 @@
+# Test files
+test/
+test-output/
+
+# Development files
+.git/
+.gitignore
+*.log
+
+# Local output
+claude-prompts/
+yourproject-test-export/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
