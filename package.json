@@ -1,6 +1,6 @@
 {
   "name": "claude-code-exporter",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Export prompts from Claude Code sessions to markdown files",
   "main": "lib/index.js",
   "bin": {
