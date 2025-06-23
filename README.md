@@ -82,6 +82,7 @@ claude-prompts [options] [project-path] [output-dir]
 - `-v, --version` - Show version number
 - `-V, --verbose` - Enable verbose output for debugging
 - `--list` - List available sessions without exporting
+- `--claude-home DIR` - Specify Claude home directory (default: auto-detect)
 
 #### Examples
 
@@ -100,6 +101,9 @@ claude-prompts --list /Users/username/my-project
 
 # Enable verbose mode for debugging
 claude-prompts -V /Users/username/my-project
+
+# Use specific Claude home directory
+claude-prompts --claude-home ~/.config/claude /Users/username/my-project
 ```
 
 ### Programmatic API
@@ -109,7 +113,8 @@ const ClaudePromptExporter = require('claude-code-exporter');
 
 // Create exporter instance
 const exporter = new ClaudePromptExporter('/path/to/project', {
-  verbose: true  // Optional: enable debug output
+  verbose: true,  // Optional: enable debug output
+  claudeHome: '/custom/claude/home'  // Optional: override Claude home
 });
 
 // Export to markdown files
@@ -170,15 +175,23 @@ Example: `2ead3268-3c7c-48ab-b46b-8b7a706d097c-create-rest-api-with.md`
 
 ## 🔍 Examples
 
-### Example 1: Documenting Project Development
+### Example 1: Creating Documentation from Full Conversations
 
-Export all prompts from your project development:
+Generate comprehensive documentation including all interactions:
 
 ```bash
-claude-prompts ~/projects/my-app ./documentation/claude-sessions
+claude-prompts --full ~/projects/my-app ./documentation/claude-sessions
 ```
 
-### Example 2: Creating a Learning Archive
+### Example 2: Extracting Code Examples
+
+Extract only assistant outputs to collect code examples and explanations:
+
+```bash
+claude-prompts --outputs-only ~/projects/my-app ./code-examples
+```
+
+### Example 3: Creating a Learning Archive
 
 Archive your Claude Code learning sessions:
 
@@ -186,7 +199,7 @@ Archive your Claude Code learning sessions:
 claude-prompts ~/learning/javascript ./learning-archive
 ```
 
-### Example 3: Batch Processing Multiple Projects
+### Example 4: Batch Processing Multiple Projects with Different Modes
 
 ```javascript
 const ClaudePromptExporter = require('claude-code-exporter');
@@ -196,11 +209,18 @@ const projects = [
   '/Users/me/project3'
 ];
 
+// Export different modes for different purposes
 projects.forEach(projectPath => {
   try {
-    const exporter = new ClaudePromptExporter(projectPath);
-    const outputDir = `./exports/${path.basename(projectPath)}`;
-    exporter.exportToMarkdown(outputDir);
+    // User prompts for quick reference
+    const promptExporter = new ClaudePromptExporter(projectPath);
+    promptExporter.exportToMarkdown(`./exports/prompts/${path.basename(projectPath)}`);
+    
+    // Full conversations for documentation
+    const fullExporter = new ClaudePromptExporter(projectPath, {
+      exportMode: ClaudePromptExporter.ExportMode.FULL_CONVERSATION
+    });
+    fullExporter.exportToMarkdown(`./exports/full/${path.basename(projectPath)}`);
   } catch (error) {
     console.error(`Failed to export ${projectPath}: ${error.message}`);
   }
@@ -212,14 +232,27 @@ projects.forEach(projectPath => {
 ### Requirements
 
 - **Node.js**: Version 14.0.0 or higher
-- **Claude Code**: Must be installed with sessions stored in `~/.claude/projects/`
+- **Claude Code**: Must be installed with sessions stored in:
+  - `~/.claude/projects/` (default location)
+  - `~/.config/claude/projects/` (XDG Base Directory compliant)
 - **Operating System**: macOS, Linux, or Windows
 
 ### Environment Variables
 
-The exporter uses standard environment variables:
+The exporter uses the following environment variables:
 
+- `CLAUDE_HOME` - Override the Claude home directory location
 - `HOME` (macOS/Linux) or `USERPROFILE` (Windows) - Used to locate the Claude home directory
+
+### Claude Home Directory Resolution
+
+The exporter determines the Claude home directory in the following priority order:
+
+1. `--claude-home` CLI option (highest priority)
+2. `CLAUDE_HOME` environment variable
+3. Interactive prompt when both `~/.claude` and `~/.config/claude` exist
+4. Automatic selection when only one directory exists
+5. Error when no Claude directory is found
 
 ## 🔧 Troubleshooting
 
@@ -241,8 +274,12 @@ The exporter uses standard environment variables:
 
 **Solution**:
 1. Install Claude Code from [claude.ai](https://claude.ai)
-2. Verify `~/.claude/` directory exists
+2. Verify that at least one of these directories exists:
+   - `~/.claude/projects/`
+   - `~/.config/claude/projects/`
 3. Check environment variables `HOME` or `USERPROFILE`
+4. Use `--claude-home` to specify a custom location
+5. Set `CLAUDE_HOME` environment variable for persistent configuration
 
 #### Empty or Missing Prompts
 
