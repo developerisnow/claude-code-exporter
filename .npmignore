@@ -1,22 +1,10 @@
-# Test files
+.claude/
+.cursorindexingignore
 test/
-test-output/
-
-# Development files
-.git/
-.gitignore
-*.log
-
-# Local output
+docs/
 claude-prompts/
-yourproject-test-export/
-
-# OS files
+test-*.js
+.gitignore
+.git/
 .DS_Store
-Thumbs.db
-
-# Editor files
-.vscode/
-.idea/
-*.swp
-*.swo
+*.log

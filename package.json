@@ -1,10 +1,10 @@
 {
   "name": "claude-code-exporter",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Export prompts from Claude Code sessions to markdown files",
   "main": "lib/index.js",
   "bin": {
-    "claude-prompts": "./bin/claude-prompts"
+    "claude-prompts": "bin/claude-prompts"
   },
   "scripts": {
     "test": "node test/test.js"
@@ -25,7 +25,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/claude-code-exporter.git"
+    "url": "git+https://github.com/yourusername/claude-code-exporter.git"
   },
   "bugs": {
     "url": "https://github.com/yourusername/claude-code-exporter/issues"
