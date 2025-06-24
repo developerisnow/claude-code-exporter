@@ -156,8 +156,8 @@ function main() {
     process.exit(1);
   }
 
-  // Determine export mode
-  let exportMode = ClaudePromptExporter.ExportMode.PROMPTS_ONLY; // Default
+  // Determine export mode from CLI flags
+  let exportMode = null;
   if (options.prompts) {
     exportMode = ClaudePromptExporter.ExportMode.PROMPTS_ONLY;
   } else if (options.outputs) {
@@ -190,14 +190,18 @@ function main() {
     });
 
     // Prompt for mode and format if not specified
-    if (!exportMode && !options.list) {
+    if (!exportMode && !options.list && options.interactive) {
       exportMode = exporter.promptForExportMode();
       exporter.options.exportMode = exportMode;
     } else if (exportMode) {
       exporter.options.exportMode = exportMode;
+    } else {
+      // Default to prompts only for non-interactive mode
+      exportMode = ClaudePromptExporter.ExportMode.PROMPTS_ONLY;
+      exporter.options.exportMode = exportMode;
     }
     
-    if (!options.list && options.interactive && exportFormat === ClaudePromptExporter.ExportFormat.MARKDOWN) {
+    if (!options.list && options.interactive && !options.json && !options.markdown && !options.allFormats) {
       exportFormat = exporter.promptForExportFormat();
       exporter.options.exportFormat = exportFormat;
     } else {
