@@ -12,99 +12,99 @@ Claude Code Exporter is a Node.js CLI tool and library for exporting Claude Code
 
 ### 1. Dual Claude Home Directory Support
 
-- [ ] Detect both `~/.claude` and `~/.config/claude` directories
+- [x] Detect both `~/.claude` and `~/.config/claude` directories
 - [ ] When both exist:
-  - [ ] Show numbered selection menu
-  - [ ] Display default option (prefer `~/.config/claude`)
-  - [ ] Allow selection with timeout (default after 10s)
-  - [ ] Remember selection for the session
-- [ ] Support `CLAUDE_HOME` environment variable override
-- [ ] Support `--claude-home` CLI flag override
-- [ ] Validate selected directory exists and contains sessions
+  - [x] Show numbered selection menu
+  - [x] Display default option (prefer `~/.config/claude`)
+  - [-] Allow selection with timeout (default after 10s) - timeout not working
+  - [-] Remember selection for the session - not implemented
+- [x] Support `CLAUDE_HOME` environment variable override
+- [x] Support `--claude-home` CLI flag override
+- [x] Validate selected directory exists and contains sessions
 
 ### 2. Export Mode Selection
 
-- [ ] Implement three export modes:
-  - [ ] **Prompts Only** - Export only user messages (default, backward compatible)
-  - [ ] **Outputs Only** - Export only assistant responses
-  - [ ] **Full Conversation** - Export both prompts and outputs
-- [ ] Interactive mode selection when not specified:
-  - [ ] Show numbered menu with descriptions
-  - [ ] Display default option
-  - [ ] Support keyboard selection with timeout
-- [ ] CLI flags for direct mode selection:
-  - [ ] `--prompts` or `-p` for prompts only
-  - [ ] `--outputs` or `-o` for outputs only
-  - [ ] `--full` or `-f` for full conversation
-- [ ] Maintain backward compatibility (no flag = prompts only)
+- [x] Implement three export modes:
+  - [x] **Prompts Only** - Export only user messages (default, backward compatible)
+  - [x] **Outputs Only** - Export only assistant responses
+  - [x] **Full Conversation** - Export both prompts and outputs
+- [/] Interactive mode selection when not specified:
+  - [x] Show numbered menu with descriptions
+  - [x] Display default option
+  - [-] Support keyboard selection with timeout - timeout not working
+- [x] CLI flags for direct mode selection:
+  - [x] `--prompts` or `-p` for prompts only
+  - [x] `--outputs` or `-o` for outputs only
+  - [x] `--full` or `-f` for full conversation
+- [x] Maintain backward compatibility (no flag = prompts only)
 
 ### 3. Export Format Selection
 
-- [ ] Support multiple export formats:
-  - [ ] **Markdown** (.md) - Default format
-  - [ ] **JSON** (.json) - Structured data format
-  - [ ] **Both** - Export in both formats simultaneously
-- [ ] Interactive format selection:
-  - [ ] Show after mode selection
-  - [ ] Display default option (Markdown)
-  - [ ] Support timeout selection
-- [ ] CLI flags for format selection:
-  - [ ] `--markdown` or `-m` for Markdown only
-  - [ ] `--json` or `-j` for JSON only
-  - [ ] `--all-formats` for both formats
-- [ ] Format-specific features:
-  - [ ] Markdown: Preserve formatting, code blocks, lists
-  - [ ] JSON: Include metadata, timestamps, message types
+- [x] Support multiple export formats:
+  - [x] **Markdown** (.md) - Default format
+  - [x] **JSON** (.json) - Structured data format
+  - [x] **Both** - Export in both formats simultaneously
+- [/] Interactive format selection:
+  - [x] Show after mode selection
+  - [x] Display default option (Markdown)
+  - [-] Support timeout selection - not possible with readline-sync
+- [x] CLI flags for format selection:
+  - [x] `--markdown` or `-m` for Markdown only
+  - [x] `--json` or `-j` for JSON only
+  - [x] `--all-formats` for both formats
+- [x] Format-specific features:
+  - [x] Markdown: Preserve formatting, code blocks, lists
+  - [x] JSON: Include metadata, timestamps, message types
 
 ### 4. Enhanced File Organization
 
-- [ ] Implement timestamp-based directory structure:
-  - [ ] Create subdirectory per session: `YYYYMMDD-HHMMSS-{title}/`
-  - [ ] Place all related files in session directory
-- [ ] File naming convention:
-  - [ ] Pattern: `{mode}-{timestamp}-{title}-{session-id}.{format}`
-  - [ ] Mode prefixes: `prompts-`, `outputs-`, `full-`
-  - [ ] Example: `prompts-20250623-172748-untitled-2d002199.md`
-- [ ] Maintain backward compatibility:
-  - [ ] Keep flat file structure for single mode/format exports
-  - [ ] Use directories only for multi-format exports
-- [ ] Handle special characters in titles:
-  - [ ] Replace spaces with hyphens
-  - [ ] Remove special characters
-  - [ ] Truncate to reasonable length (50 chars)
+- [x] Implement timestamp-based directory structure:
+  - [x] Create subdirectory per session: `YYYYMMDD-HHMMSS-{title}/`
+  - [x] Place all related files in session directory
+- [/] File naming convention:
+  - [x] Pattern: `{mode}-{timestamp}-{title}-{session-id}.{format}`
+  - [/] Mode prefixes: `prompts-`, `outputs-`, `full-output-` (not `full-`)
+  - [x] Example: `prompts-20250623-172748-untitled-2d002199.md`
+- [x] Maintain backward compatibility:
+  - [x] Keep flat file structure for single mode/format exports
+  - [x] Use directories only for multi-format exports
+- [x] Handle special characters in titles:
+  - [x] Replace spaces with hyphens
+  - [x] Remove special characters
+  - [x] Truncate to reasonable length (50 chars)
 
 ### 5. Session Statistics
 
-- [ ] Display enhanced session information:
-  - [ ] Total message count
-  - [ ] User message count
-  - [ ] Assistant message count
-  - [ ] Last activity timestamp
-- [ ] Format: `✓ {session-id}: {total} messages ({user} user, {assistant} assistant) last {timestamp}`
-- [ ] Include statistics in exported files:
-  - [ ] Session metadata header
-  - [ ] Message type breakdown
-  - [ ] Export timestamp
+- [x] Display enhanced session information:
+  - [x] Total message count
+  - [x] User message count
+  - [x] Assistant message count
+  - [x] Last activity timestamp
+- [x] Format: `✓ {session-id}: {total} messages ({user} user, {assistant} assistant) last {timestamp}`
+- [x] Include statistics in exported files:
+  - [x] Session metadata header
+  - [x] Message type breakdown
+  - [x] Export timestamp
 
 ### 6. Interactive UI Improvements
 
-- [ ] Implement consistent interactive prompts:
-  - [ ] Show current selection
-  - [ ] Display default option
-  - [ ] Support arrow key navigation
-  - [ ] Add timeout with visual countdown
-- [ ] Default selection behavior:
-  - [ ] Claude home: `~/.config/claude` (if exists)
-  - [ ] Export mode: Prompts Only
-  - [ ] Format: Markdown
-- [ ] Timeout handling:
-  - [ ] 10-second timeout for all prompts
-  - [ ] Show countdown in prompt
-  - [ ] Auto-select default on timeout
-- [ ] Error handling:
-  - [ ] Clear error messages
-  - [ ] Suggest corrective actions
-  - [ ] Non-zero exit codes for failures
+- [/] Implement consistent interactive prompts:
+  - [-] Show current selection - not implemented
+  - [x] Display default option
+  - [-] Support arrow key navigation - not possible with readline-sync
+  - [-] Add timeout with visual countdown - not possible with readline-sync
+- [x] Default selection behavior:
+  - [x] Claude home: `~/.config/claude` (if exists)
+  - [x] Export mode: Prompts Only
+  - [x] Format: Markdown
+- [-] Timeout handling:
+  - [-] 10-second timeout for all prompts - not possible with readline-sync
+  - [-] Show countdown in prompt - not possible with readline-sync
+  - [-] Auto-select default on timeout - not possible with readline-sync
+- [x] Error handling:
+  - [x] Clear error messages
+  - [x] Suggest corrective actions
+  - [x] Non-zero exit codes for failures
 
 ### 7. CLI Enhancements
 

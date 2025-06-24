@@ -157,7 +157,7 @@ function main() {
   }
 
   // Determine export mode
-  let exportMode = null;
+  let exportMode = ClaudePromptExporter.ExportMode.PROMPTS_ONLY; // Default
   if (options.prompts) {
     exportMode = ClaudePromptExporter.ExportMode.PROMPTS_ONLY;
   } else if (options.outputs) {
@@ -192,9 +192,16 @@ function main() {
     // Prompt for mode and format if not specified
     if (!exportMode && !options.list) {
       exportMode = exporter.promptForExportMode();
+      exporter.options.exportMode = exportMode;
+    } else if (exportMode) {
+      exporter.options.exportMode = exportMode;
     }
-    if (!options.list) {
+    
+    if (!options.list && options.interactive && exportFormat === ClaudePromptExporter.ExportFormat.MARKDOWN) {
       exportFormat = exporter.promptForExportFormat();
+      exporter.options.exportFormat = exportFormat;
+    } else {
+      exporter.options.exportFormat = exportFormat;
     }
 
     const modeText = {
