@@ -4,15 +4,18 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Node.js Version](https://img.shields.io/node/v/claude-code-exporter.svg)](https://nodejs.org)
 
-Export your Claude Code session prompts to markdown files for documentation, analysis, and archival purposes.
+Export Claude Code conversations to markdown or JSON with flexible modes and formats.
 
 ## 🚀 Features
 
-- **Extract User Prompts**: Automatically extracts all user prompts from Claude Code sessions
-- **Markdown Export**: Generates clean, readable markdown files for each session
-- **Smart Filtering**: Excludes system-generated messages and command outputs
-- **Flexible Path Detection**: Automatically finds Claude sessions for your projects
-- **CLI & API**: Use as a command-line tool or integrate into your Node.js applications
+- **Multiple Export Modes**: Extract user prompts, assistant outputs, or full conversations
+- **Multiple Formats**: Export to Markdown, JSON, or both simultaneously
+- **Dual Directory Support**: Automatically handles both `~/.claude` and `~/.config/claude`
+- **Interactive Mode**: User-friendly prompts with smart defaults and timeouts
+- **Enhanced Statistics**: Message counts, timestamps, and session metadata
+- **Smart Organization**: Timestamp-based directories for multi-format exports
+- **Flexible CLI**: Rich command-line options with shortcuts
+- **Programmatic API**: Full-featured library for Node.js integration
 - **Cross-Platform**: Works on macOS, Linux, and Windows
 
 ## 📋 Table of Contents
@@ -21,9 +24,11 @@ Export your Claude Code session prompts to markdown files for documentation, ana
 - [Quick Start](#quick-start)
 - [Usage](#usage)
   - [Command Line Interface](#command-line-interface)
+  - [Interactive Mode](#interactive-mode)
   - [Programmatic API](#programmatic-api)
-- [Output Format](#output-format)
-- [Examples](#examples)
+- [Export Modes](#export-modes)
+- [Export Formats](#export-formats)
+- [Output Examples](#output-examples)
 - [Configuration](#configuration)
 - [Troubleshooting](#troubleshooting)
 - [Contributing](#contributing)
@@ -51,16 +56,28 @@ npx claude-code-exporter /path/to/project
 
 ## 🎯 Quick Start
 
-Export prompts from your current project:
+Export with interactive prompts:
 
 ```bash
 claude-prompts
 ```
 
-Export prompts from a specific project:
+Export full conversations:
 
 ```bash
-claude-prompts /path/to/your/project
+claude-prompts --full /path/to/project
+```
+
+Export to JSON format:
+
+```bash
+claude-prompts --json /path/to/project
+```
+
+Export everything (all modes and formats):
+
+```bash
+claude-prompts --full --all-formats /path/to/project
 ```
 
 ## 📖 Usage
@@ -74,157 +91,193 @@ claude-prompts [options] [project-path] [output-dir]
 #### Arguments
 
 - `project-path` - Path to your project (default: current directory)
-- `output-dir` - Output directory for markdown files (default: `./claude-prompts`)
+- `output-dir` - Output directory for exported files (default: `./claude-prompts`)
 
 #### Options
 
+##### Basic Options
 - `-h, --help` - Show help message
 - `-v, --version` - Show version number
 - `-V, --verbose` - Enable verbose output for debugging
+- `-q, --quiet` - Suppress all output except errors
 - `--list` - List available sessions without exporting
-- `--claude-home DIR` - Specify Claude home directory (default: auto-detect)
+
+##### Export Modes
+- `-p, --prompts` - Export user prompts only (default)
+- `-o, --outputs` - Export assistant outputs only
+- `-f, --full` - Export full conversations
+
+##### Export Formats
+- `-m, --markdown` - Export as Markdown (default)
+- `-j, --json` - Export as JSON
+- `--all-formats` - Export in both Markdown and JSON
+
+##### Other Options
+- `--no-interactive` - Disable interactive prompts, use defaults
+- `--claude-home DIR` - Specify Claude home directory
+- `--timeout SECONDS` - Timeout for interactive prompts (default: 10)
 
 #### Examples
 
 ```bash
-# Export from current directory
+# Interactive mode (prompts for all options)
 claude-prompts
 
-# Export from specific project
-claude-prompts /Users/username/my-project
+# Export user prompts (default)
+claude-prompts /path/to/project
 
-# Export to custom directory
-claude-prompts /Users/username/my-project ./my-exports
+# Export full conversations
+claude-prompts --full /path/to/project
+
+# Export only assistant outputs as JSON
+claude-prompts --outputs --json /path/to/project
+
+# Export everything in both formats
+claude-prompts --full --all-formats /path/to/project ./exports
 
 # List sessions without exporting
-claude-prompts --list /Users/username/my-project
+claude-prompts --list /path/to/project
 
-# Enable verbose mode for debugging
-claude-prompts -V /Users/username/my-project
+# Non-interactive with specific Claude home
+claude-prompts --no-interactive --claude-home ~/.config/claude /path/to/project
 
-# Use specific Claude home directory
-claude-prompts --claude-home ~/.config/claude /Users/username/my-project
+# Quiet mode for scripts
+claude-prompts --quiet --full /path/to/project
 ```
+
+### Interactive Mode
+
+When run without mode or format flags, the tool enters interactive mode:
+
+```
+Choose a mode:
+1) Prompts Only
+2) Outputs Only
+3) Full Conversation
+Defaulting to: 1) Prompts Only
+What do you want to export? [1-3]: _
+
+Choose a format:
+1) Markdown
+2) JSON
+3) Both: Markdown and JSON
+Defaulting to: 1) Markdown
+What format do you want? [1-3]: _
+```
+
+Interactive features:
+- Smart defaults (Prompts Only, Markdown)
+- 10-second timeout (auto-selects default)
+- Multiple Claude home directory handling
+- Clear visual feedback
 
 ### Programmatic API
 
 ```javascript
 const ClaudePromptExporter = require('claude-code-exporter');
 
-// Create exporter instance
+// Basic usage
+const exporter = new ClaudePromptExporter('/path/to/project');
+const result = await exporter.export('./output');
+
+// Advanced usage with all options
 const exporter = new ClaudePromptExporter('/path/to/project', {
-  verbose: true,  // Optional: enable debug output
-  claudeHome: '/custom/claude/home'  // Optional: override Claude home
+  exportMode: ClaudePromptExporter.ExportMode.FULL_CONVERSATION,
+  exportFormat: ClaudePromptExporter.ExportFormat.BOTH,
+  verbose: true,
+  interactive: false,
+  timeout: 5000,
+  claudeHome: '/custom/claude/home'
 });
 
-// Export to markdown files
-const result = exporter.exportToMarkdown('./output-directory');
+// Export with specific mode/format
+const result = await exporter.export('./output');
 console.log(`Exported ${result.sessionsExported} sessions`);
+console.log(`Total messages: ${result.totalMessages}`);
+console.log(`User messages: ${result.totalUserMessages}`);
+console.log(`Assistant messages: ${result.totalAssistantMessages}`);
 
-// Or just extract prompts without exporting
-const sessions = exporter.extractPrompts();
-sessions.forEach(({ sessionId, prompts }) => {
-  console.log(`Session ${sessionId}: ${prompts.length} prompts`);
-});
+// Or use specific methods
+const sessions = exporter.extractMessages();
+const homes = exporter._detectClaudeHomes();
 ```
 
-## 📄 Output Format
+## 📊 Export Modes
 
-Each exported markdown file follows this structure:
+### Prompts Only (Default)
+Exports only user messages, filtering out:
+- System messages
+- Tool results
+- Assistant responses
 
-```markdown
-# Claude Code Session Export
+Best for: Creating prompt libraries, analyzing your questions
 
-## Session Information
+### Outputs Only
+Exports only assistant responses, excluding:
+- User prompts
+- System messages
+- Tool results
 
-- **Session ID**: `2ead3268-3c7c-48ab-b46b-8b7a706d097c`
-- **Total Prompts**: 7
-- **First Prompt**: 12/25/2024, 10:30:45 AM
-- **Last Prompt**: 12/25/2024, 11:45:23 AM
-- **Project Path**: `/Users/username/my-project`
+Best for: Collecting code examples, building documentation
 
----
+### Full Conversation
+Exports complete conversations including:
+- User prompts
+- Assistant responses
+- Context and flow
 
-## Prompt 1
+Best for: Documentation, learning from interactions, debugging
 
-> 12/25/2024, 10:30:45 AM
+## 📄 Export Formats
 
+### Markdown Format
+Human-readable format with:
+- Session metadata
+- Formatted timestamps
+- Syntax highlighting for code
+- Clear message separation
+
+### JSON Format
+Structured data including:
+- Complete metadata
+- Message arrays with roles
+- Timestamps and indices
+- Statistics object
+
+### Both Formats
+When exporting both formats:
+- Creates timestamp-based directories
+- Organizes files by session
+- Maintains consistent naming
+
+## 📁 Output Examples
+
+### Single Format Output
 ```
-Create a REST API with Express.js for a todo application
-```
-
----
-
-## Prompt 2
-
-> 12/25/2024, 10:35:12 AM
-
-```
-Add authentication using JWT tokens
-```
-```
-
-### File Naming Convention
-
-Files are named using the pattern: `{session-id}-{title}.md`
-
-- `session-id`: Unique identifier for the Claude session
-- `title`: Generated from the first few words of the initial prompt
-
-Example: `2ead3268-3c7c-48ab-b46b-8b7a706d097c-create-rest-api-with.md`
-
-## 🔍 Examples
-
-### Example 1: Creating Documentation from Full Conversations
-
-Generate comprehensive documentation including all interactions:
-
-```bash
-claude-prompts --full ~/projects/my-app ./documentation/claude-sessions
-```
-
-### Example 2: Extracting Code Examples
-
-Extract only assistant outputs to collect code examples and explanations:
-
-```bash
-claude-prompts --outputs-only ~/projects/my-app ./code-examples
+claude-prompts/
+├── 2d002199-ca50-464e-ab59-d2165df9e248-untitled-prompts.md
+├── 33c13f1c-928d-4128-86a2-28b241f47949-react-hooks-full.md
+└── 73d2983f-16f9-4267-9611-3b55f790562e-api-design-outputs.json
 ```
 
-### Example 3: Creating a Learning Archive
-
-Archive your Claude Code learning sessions:
-
-```bash
-claude-prompts ~/learning/javascript ./learning-archive
+### Multi-Format Output (--all-formats)
+```
+claude-prompts/
+├── 20250623-143022-react-hooks/
+│   ├── prompts-20250623-143022-react-hooks-33c13f1c.md
+│   ├── prompts-20250623-143022-react-hooks-33c13f1c.json
+└── 20250623-143156-api-design/
+    ├── full-20250623-143156-api-design-73d2983f.md
+    └── full-20250623-143156-api-design-73d2983f.json
 ```
 
-### Example 4: Batch Processing Multiple Projects with Different Modes
+### Statistics Output
+```
+✓ 2d002199-ca50-464e-ab59-d2165df9e248: 143 messages (56 user, 87 assistant) last 6/23/2025, 5:27:48 PM
+✓ 33c13f1c-928d-4128-86a2-28b241f47949: 177 messages (89 user, 88 assistant) last 6/23/2025, 6:45:12 PM
+✓ 73d2983f-16f9-4267-9611-3b55f790562e: 235 messages (112 user, 123 assistant) last 6/24/2025, 9:15:33 AM
 
-```javascript
-const ClaudePromptExporter = require('claude-code-exporter');
-const projects = [
-  '/Users/me/project1',
-  '/Users/me/project2',
-  '/Users/me/project3'
-];
-
-// Export different modes for different purposes
-projects.forEach(projectPath => {
-  try {
-    // User prompts for quick reference
-    const promptExporter = new ClaudePromptExporter(projectPath);
-    promptExporter.exportToMarkdown(`./exports/prompts/${path.basename(projectPath)}`);
-    
-    // Full conversations for documentation
-    const fullExporter = new ClaudePromptExporter(projectPath, {
-      exportMode: ClaudePromptExporter.ExportMode.FULL_CONVERSATION
-    });
-    fullExporter.exportToMarkdown(`./exports/full/${path.basename(projectPath)}`);
-  } catch (error) {
-    console.error(`Failed to export ${projectPath}: ${error.message}`);
-  }
-});
+Exported 3 sessions (555 total messages) to ./claude-prompts/
 ```
 
 ## ⚙️ Configuration
@@ -233,76 +286,53 @@ projects.forEach(projectPath => {
 
 - **Node.js**: Version 14.0.0 or higher
 - **Claude Code**: Must be installed with sessions stored in:
-  - `~/.claude/projects/` (default location)
+  - `~/.claude/projects/` (original location)
   - `~/.config/claude/projects/` (XDG Base Directory compliant)
 - **Operating System**: macOS, Linux, or Windows
 
 ### Environment Variables
 
-The exporter uses the following environment variables:
-
 - `CLAUDE_HOME` - Override the Claude home directory location
 - `HOME` (macOS/Linux) or `USERPROFILE` (Windows) - Used to locate the Claude home directory
 
-### Claude Home Directory Resolution
-
-The exporter determines the Claude home directory in the following priority order:
+### Directory Priority
 
 1. `--claude-home` CLI option (highest priority)
 2. `CLAUDE_HOME` environment variable
-3. Interactive prompt when both `~/.claude` and `~/.config/claude` exist
-4. Automatic selection when only one directory exists
-5. Error when no Claude directory is found
+3. Interactive selection (when both directories exist)
+4. Automatic detection (when one directory exists)
+5. Error (when no directory found)
 
 ## 🔧 Troubleshooting
 
+### Multiple Claude Directories
+
+When both `~/.claude` and `~/.config/claude` exist:
+- Interactive mode: Prompts for selection with smart default
+- Non-interactive mode: Uses `~/.config/claude` (newer standard)
+- Override: Use `--claude-home` or `CLAUDE_HOME` environment variable
+
 ### Common Issues
 
-#### "No Claude sessions found for project"
+#### "No Claude sessions found"
+- Verify project path matches Claude Code usage
+- Check sessions exist in Claude directories
+- Use `--verbose` for detailed path matching info
 
-**Cause**: The project path doesn't match any Claude Code sessions.
-
-**Solution**:
-1. Verify the project path is correct
-2. Ensure you have Claude Code sessions for this project
-3. Check that sessions exist in `~/.claude/projects/`
-4. Use `--verbose` flag for detailed debugging output
-
-#### "Claude home directory not found"
-
-**Cause**: Claude Code is not installed or not in the expected location.
-
-**Solution**:
-1. Install Claude Code from [claude.ai](https://claude.ai)
-2. Verify that at least one of these directories exists:
-   - `~/.claude/projects/`
-   - `~/.config/claude/projects/`
-3. Check environment variables `HOME` or `USERPROFILE`
-4. Use `--claude-home` to specify a custom location
-5. Set `CLAUDE_HOME` environment variable for persistent configuration
-
-#### Empty or Missing Prompts
-
-**Cause**: Sessions may contain only system messages or commands.
-
-**Solution**:
-1. The exporter automatically filters system-generated content
-2. Verify your sessions contain actual user prompts
-3. Use `--list` to preview available sessions
+#### "No sessions with [type] found"
+- Some sessions may not contain the requested message type
+- Try `--full` to see all messages
+- Use `--list` to preview session contents
 
 ### Debug Mode
 
-Enable verbose output for troubleshooting:
-
 ```bash
+# Verbose output for troubleshooting
 claude-prompts --verbose /path/to/project
-```
 
-This will show:
-- Path encoding details
-- Session discovery process
-- Message filtering information
-- Processing statistics
+# List sessions with details
+claude-prompts --list --verbose /path/to/project
+```
 
 ## 🤝 Contributing
 
@@ -330,13 +360,6 @@ npm test
 # Test CLI locally
 ./bin/claude-prompts /path/to/test/project
 ```
-
-### Code Style
-
-- Use 2 spaces for indentation
-- Follow Node.js best practices
-- Add JSDoc comments for public methods
-- Ensure all tests pass before submitting PR
 
 ## 📝 License
 

@@ -17,13 +17,26 @@ ARGUMENTS:
   output-dir      Output directory for markdown files (default: ./claude-prompts)
 
 OPTIONS:
-  -h, --help         Show this help message
-  -v, --version      Show version number
-  -V, --verbose      Enable verbose output
-  --list             List available sessions without exporting
-  --full             Export full conversations (all messages)
-  --outputs-only     Export only assistant outputs
-  --claude-home DIR  Specify Claude home directory (default: auto-detect)
+  -h, --help             Show this help message
+  -v, --version          Show version number
+  -V, --verbose          Enable verbose output
+  --list                 List available sessions without exporting
+  
+  Export Modes:
+  -p, --prompts          Export user prompts only (default)
+  -o, --outputs          Export assistant outputs only
+  -f, --full             Export full conversations
+  
+  Export Formats:
+  -m, --markdown         Export as Markdown (default)
+  -j, --json             Export as JSON
+  --all-formats          Export in both Markdown and JSON
+  
+  Other Options:
+  -q, --quiet            Suppress all output except errors
+  --no-interactive       Disable interactive prompts, use defaults
+  --claude-home DIR      Specify Claude home directory
+  --timeout SECONDS      Timeout for interactive prompts (default: 10)
 
 EXAMPLES:
   claude-prompts                              # Export user prompts (default)
@@ -42,9 +55,16 @@ function parseArgs(args) {
     help: false,
     version: false,
     verbose: false,
+    quiet: false,
     list: false,
+    prompts: false,
+    outputs: false,
     full: false,
-    outputsOnly: false,
+    markdown: false,
+    json: false,
+    allFormats: false,
+    interactive: true,
+    timeout: 10000,
     claudeHome: null,
     projectPath: process.cwd(),
     outputDir: './claude-prompts'
@@ -61,12 +81,31 @@ function parseArgs(args) {
       options.version = true;
     } else if (arg === '-V' || arg === '--verbose') {
       options.verbose = true;
+    } else if (arg === '-q' || arg === '--quiet') {
+      options.quiet = true;
     } else if (arg === '--list') {
       options.list = true;
-    } else if (arg === '--full') {
+    } else if (arg === '-p' || arg === '--prompts') {
+      options.prompts = true;
+    } else if (arg === '-o' || arg === '--outputs' || arg === '--outputs-only') {
+      options.outputs = true;
+    } else if (arg === '-f' || arg === '--full') {
       options.full = true;
-    } else if (arg === '--outputs-only') {
-      options.outputsOnly = true;
+    } else if (arg === '-m' || arg === '--markdown') {
+      options.markdown = true;
+    } else if (arg === '-j' || arg === '--json') {
+      options.json = true;
+    } else if (arg === '--all-formats') {
+      options.allFormats = true;
+    } else if (arg === '--no-interactive') {
+      options.interactive = false;
+    } else if (arg === '--timeout') {
+      if (i + 1 < args.length && !args[i + 1].startsWith('-')) {
+        options.timeout = parseInt(args[++i]) * 1000;
+      } else {
+        console.error('Error: --timeout requires a number in seconds');
+        process.exit(1);
+      }
     } else if (arg === '--claude-home') {
       if (i + 1 < args.length && !args[i + 1].startsWith('-')) {
         options.claudeHome = args[++i];
@@ -105,44 +144,77 @@ function main() {
   }
 
   // Validate mutually exclusive options
-  if (options.full && options.outputsOnly) {
-    console.error('Error: --full and --outputs-only cannot be used together');
+  const modeCount = [options.prompts, options.outputs, options.full].filter(Boolean).length;
+  if (modeCount > 1) {
+    console.error('Error: Only one export mode can be specified');
+    process.exit(1);
+  }
+
+  const formatCount = [options.markdown, options.json, options.allFormats].filter(Boolean).length;
+  if (formatCount > 1) {
+    console.error('Error: Only one format option can be specified');
     process.exit(1);
   }
 
   // Determine export mode
-  let exportMode = ClaudePromptExporter.ExportMode.PROMPTS_ONLY;
-  if (options.full) {
-    exportMode = ClaudePromptExporter.ExportMode.FULL_CONVERSATION;
-  } else if (options.outputsOnly) {
+  let exportMode = null;
+  if (options.prompts) {
+    exportMode = ClaudePromptExporter.ExportMode.PROMPTS_ONLY;
+  } else if (options.outputs) {
     exportMode = ClaudePromptExporter.ExportMode.OUTPUTS_ONLY;
+  } else if (options.full) {
+    exportMode = ClaudePromptExporter.ExportMode.FULL_CONVERSATION;
   }
 
-  const modeText = {
-    [ClaudePromptExporter.ExportMode.PROMPTS_ONLY]: 'User Prompts',
-    [ClaudePromptExporter.ExportMode.FULL_CONVERSATION]: 'Full Conversations',
-    [ClaudePromptExporter.ExportMode.OUTPUTS_ONLY]: 'Assistant Outputs'
-  }[exportMode];
-
-  console.log(`Claude Session Exporter (${modeText})\n`);
+  // Determine export format
+  let exportFormat = ClaudePromptExporter.ExportFormat.MARKDOWN;
+  if (options.json) {
+    exportFormat = ClaudePromptExporter.ExportFormat.JSON;
+  } else if (options.allFormats) {
+    exportFormat = ClaudePromptExporter.ExportFormat.BOTH;
+  }
 
   try {
     // Resolve paths
     const projectPath = path.resolve(options.projectPath);
     const outputDir = path.resolve(options.outputDir);
 
+    // Create exporter instance
+    const exporter = new ClaudePromptExporter(projectPath, { 
+      verbose: options.verbose,
+      claudeHome: options.claudeHome,
+      exportMode: exportMode,
+      exportFormat: exportFormat,
+      interactive: options.interactive,
+      timeout: options.timeout
+    });
+
+    // Prompt for mode and format if not specified
+    if (!exportMode && !options.list) {
+      exportMode = exporter.promptForExportMode();
+    }
+    if (!options.list) {
+      exportFormat = exporter.promptForExportFormat();
+    }
+
+    const modeText = {
+      [ClaudePromptExporter.ExportMode.PROMPTS_ONLY]: 'User Prompts',
+      [ClaudePromptExporter.ExportMode.FULL_CONVERSATION]: 'Full Conversations',
+      [ClaudePromptExporter.ExportMode.OUTPUTS_ONLY]: 'Assistant Outputs'
+    }[exportMode || ClaudePromptExporter.ExportMode.PROMPTS_ONLY];
+
+    if (!options.quiet) {
+      console.log(`Claude Session Exporter (${modeText})\n`);
+    }
+
     // Validate project path exists
     if (!fs.existsSync(projectPath)) {
       throw new Error(`Project path does not exist: ${projectPath}`);
     }
 
-    console.log(`Project: ${projectPath}`);
-    
-    const exporter = new ClaudePromptExporter(projectPath, { 
-      verbose: options.verbose,
-      claudeHome: options.claudeHome,
-      exportMode: exportMode
-    });
+    if (!options.quiet) {
+      console.log(`Project: ${projectPath}`);
+    }
 
     if (options.list) {
       // List mode - just show available sessions
@@ -166,10 +238,12 @@ function main() {
       });
     } else {
       // Export mode
-      console.log(`Output:  ${outputDir}\n`);
-      const result = exporter.exportToMarkdown(outputDir);
+      if (!options.quiet) {
+        console.log(`Output:  ${outputDir}\n`);
+      }
+      const result = exporter.export(outputDir);
       
-      if (result.sessionsExported === 0) {
+      if (result.sessionsExported === 0 && !options.quiet) {
         console.log('\nNo sessions found to export.');
       }
     }

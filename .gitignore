@@ -3,3 +3,5 @@ node_modules/
 *.log
 claude-prompts/
 .claude/
+test-output/
+test-output-*/
