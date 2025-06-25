@@ -1,0 +1,70 @@
+# Pre-commit Rules for Claude Code Exporter v2
+
+## Automated Checks (Run by Husky)
+
+1. **Linting**
+   - ESLint with TypeScript rules
+   - Check for unused variables
+   - Enforce async/await best practices
+   - No floating promises
+
+2. **Type Checking**
+   - TypeScript compiler with --noEmit
+   - Strict mode enabled
+   - No implicit any
+
+3. **Code Formatting**
+   - Prettier for consistent style
+   - Auto-fix on commit
+
+4. **Tests**
+   - Unit tests must pass
+   - Coverage thresholds enforced
+   - No skipped tests allowed
+
+5. **Complexity Analysis**
+   - Cyclomatic complexity < 10
+   - Max function length: 50 lines
+   - Max file length: 300 lines
+   - Max depth: 4 levels
+
+## SOLID Principles Checklist
+
+Before committing, verify:
+
+- [ ] **Single Responsibility**: Each class/function has one reason to change
+- [ ] **Open/Closed**: New features added via extension, not modification
+- [ ] **Liskov Substitution**: Subtypes are substitutable for base types
+- [ ] **Interface Segregation**: No client forced to depend on unused methods
+- [ ] **Dependency Inversion**: Depend on abstractions, not concretions
+
+## Clean Code Checklist
+
+- [ ] Functions do ONE thing
+- [ ] Descriptive variable and function names
+- [ ] No magic numbers (use constants)
+- [ ] No commented-out code
+- [ ] Tests are readable and maintainable
+
+## Security Checklist
+
+- [ ] No hardcoded credentials
+- [ ] Input validation on all external data
+- [ ] No SQL injection vulnerabilities
+- [ ] Dependencies are up to date
+- [ ] No console.log() in production code
+
+## Performance Checklist
+
+- [ ] No N+1 queries
+- [ ] Proper database indexes
+- [ ] Pagination for large datasets
+- [ ] Caching strategy implemented
+- [ ] No memory leaks
+
+## Documentation Requirements
+
+- [ ] JSDoc comments for public APIs
+- [ ] README updated if needed
+- [ ] ADRs for architectural decisions
+- [ ] Migration guide for breaking changes
