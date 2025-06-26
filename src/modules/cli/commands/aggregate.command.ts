@@ -3,7 +3,7 @@ import { Logger } from '@nestjs/common';
 import { AggregateByProjectUseCase } from '../../analytics/application/aggregate-by-project.use-case';
 import { AggregateByProjectCommand } from '../../analytics/application/commands/aggregate-by-project.command';
 import { AggregationSchedulerService } from '../../analytics/infrastructure/aggregation-scheduler.service';
-import * as ora from 'ora';
+import ora from 'ora';
 
 interface AggregateOptions {
   output?: string;

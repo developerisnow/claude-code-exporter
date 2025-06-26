@@ -29,7 +29,7 @@ export class Session extends AggregateRoot {
     this.projectPath = params.projectPath;
     this.createdAt = params.createdAt || new Date();
     this.metadata = params.metadata || {};
-    
+
     this.validate();
   }
 
@@ -37,7 +37,7 @@ export class Session extends AggregateRoot {
     if (!this.projectPath || this.projectPath.trim().length === 0) {
       throw new Error('Session project path is required');
     }
-    
+
     if (this.projectPath.length > 500) {
       throw new Error('Session project path must be less than 500 characters');
     }
@@ -47,7 +47,7 @@ export class Session extends AggregateRoot {
     if (!prompt.sessionId.equals(this.id)) {
       throw new Error('Prompt does not belong to this session');
     }
-    
+
     this.prompts.push(prompt);
   }
 
@@ -58,8 +58,8 @@ export class Session extends AggregateRoot {
   getStatistics(): SessionStatistics {
     return new SessionStatistics({
       totalPrompts: this.prompts.length,
-      userPrompts: this.prompts.filter(p => p.isUserRole()).length,
-      assistantPrompts: this.prompts.filter(p => p.isAssistantRole()).length,
+      userPrompts: this.prompts.filter((p) => p.isUserRole()).length,
+      assistantPrompts: this.prompts.filter((p) => p.isAssistantRole()).length,
       firstPromptAt: this.prompts[0]?.timestamp,
       lastPromptAt: this.prompts[this.prompts.length - 1]?.timestamp,
     });
@@ -89,10 +89,10 @@ export class Session extends AggregateRoot {
       return null;
     }
 
-    const timestamps = this.prompts.map(p => p.timestamp);
+    const timestamps = this.prompts.map((p) => p.timestamp);
     return {
-      start: new Date(Math.min(...timestamps.map(t => t.getTime()))),
-      end: new Date(Math.max(...timestamps.map(t => t.getTime()))),
+      start: new Date(Math.min(...timestamps.map((t) => t.getTime()))),
+      end: new Date(Math.max(...timestamps.map((t) => t.getTime()))),
     };
   }
 }

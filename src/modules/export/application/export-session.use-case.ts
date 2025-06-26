@@ -72,7 +72,7 @@ export class ExportSessionUseCase {
     for (const session of sessions) {
       const prompts = await this.promptRepository.findBySessionId(session.id);
       const filteredPrompts = this.filterPromptsByMode(prompts, command.mode);
-      
+
       data.push({
         session,
         prompts: filteredPrompts,
@@ -85,9 +85,9 @@ export class ExportSessionUseCase {
   private filterPromptsByMode(prompts: Prompt[], mode: ExportMode): Prompt[] {
     switch (mode) {
       case ExportMode.PROMPTS_ONLY:
-        return prompts.filter(p => p.role === Role.USER);
+        return prompts.filter((p) => p.role === Role.USER);
       case ExportMode.OUTPUTS_ONLY:
-        return prompts.filter(p => p.role === Role.ASSISTANT);
+        return prompts.filter((p) => p.role === Role.ASSISTANT);
       case ExportMode.FULL_CONVERSATION:
         return prompts;
       default:
@@ -111,7 +111,7 @@ export class ExportSessionUseCase {
 
       for (const mode of modes) {
         // Re-filter data for each mode
-        const modeData = data.map(item => ({
+        const modeData = data.map((item) => ({
           ...item,
           prompts: this.filterPromptsByMode(item.prompts, mode),
         }));
@@ -147,9 +147,10 @@ export class ExportSessionUseCase {
           ? this.markdownExporter.export({ sessions: data, mode: command.mode })
           : this.jsonExporter.export({ sessions: data, mode: command.mode });
 
-      const extension = command.format === ExportFormat.MARKDOWN ? 'md' : 'json';
+      const extension =
+        command.format === ExportFormat.MARKDOWN ? 'md' : 'json';
       const filename = this.generateFilename(command, command.mode, extension);
-      
+
       await this.fileSystemService.writeFile(
         path.join(command.outputPath, filename),
         content,

@@ -28,7 +28,7 @@ export class Topic extends AggregateRoot {
     this.rules = params.rules;
     this.createdAt = params.createdAt || new Date();
     this.createdBy = params.createdBy || 'system';
-    
+
     this.validate();
   }
 
@@ -36,15 +36,17 @@ export class Topic extends AggregateRoot {
     if (!this.name || this.name.trim().length === 0) {
       throw new Error('Topic name is required');
     }
-    
+
     if (this.name.length > 200) {
       throw new Error('Topic name must be less than 200 characters');
     }
-    
+
     // Name should be alphanumeric with spaces, hyphens, and underscores
     const nameRegex = /^[a-zA-Z0-9\s\-_]+$/;
     if (!nameRegex.test(this.name)) {
-      throw new Error('Topic name can only contain letters, numbers, spaces, hyphens, and underscores');
+      throw new Error(
+        'Topic name can only contain letters, numbers, spaces, hyphens, and underscores',
+      );
     }
   }
 

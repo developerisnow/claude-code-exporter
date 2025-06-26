@@ -1,35 +1,41 @@
 import {
   Entity,
-  PrimaryGeneratedColumn,
   Column,
+  PrimaryColumn,
+  OneToMany,
   CreateDateColumn,
   UpdateDateColumn,
-  OneToMany,
-  Index,
 } from 'typeorm';
 import { PromptEntity } from './prompt.entity';
 
 @Entity('sessions')
-@Index('idx_sessions_project_path', ['projectPath'])
-@Index('idx_sessions_created_at', ['createdAt'])
 export class SessionEntity {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryColumn('uuid')
   id: string;
 
-  @Column({ name: 'project_path', type: 'varchar', length: 500 })
-  projectPath: string;
+  @Column('text')
+  project_path: string;
 
-  @Column({ name: 'created_at', type: 'timestamptz' })
-  createdAt: Date;
+  @Column('timestamp')
+  start_time: Date;
 
-  @Column({ type: 'jsonb', default: {} })
-  metadata: Record<string, any>;
+  @Column('timestamp', { nullable: true })
+  end_time: Date | null;
 
-  @Column({ name: 'created_by', type: 'varchar', length: 255, nullable: true })
-  createdBy: string | null;
+  @Column('integer', { default: 0 })
+  prompt_count: number;
 
-  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
-  updatedAt: Date;
+  @Column('integer', { default: 0 })
+  code_files_count: number;
+
+  @Column('jsonb', { nullable: true })
+  metadata: Record<string, any> | null;
+
+  @CreateDateColumn()
+  created_at: Date;
+
+  @UpdateDateColumn()
+  updated_at: Date;
 
   @OneToMany(() => PromptEntity, (prompt) => prompt.session)
   prompts: PromptEntity[];

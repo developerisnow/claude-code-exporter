@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Session } from '../../sessions/domain/session.entity';
 import { Prompt, Role } from '../../prompts/domain/prompt.entity';
-import { SessionId, PromptId } from '../../common/domain/value-objects';
+import { SessionId } from '../../common/domain/value-objects';
 import { RawSessionData, RawMessage } from './claude-session-parser.interface';
 
 @Injectable()
@@ -9,7 +9,9 @@ export class SessionFactory {
   createFromRaw(rawData: RawSessionData): Session {
     // Create session
     const session = new Session({
-      id: rawData.sessionId ? SessionId.fromString(rawData.sessionId) : undefined,
+      id: rawData.sessionId
+        ? SessionId.fromString(rawData.sessionId)
+        : undefined,
       projectPath: rawData.projectPath,
       createdAt: rawData.createdAt ? new Date(rawData.createdAt) : new Date(),
       metadata: rawData.metadata || {},
@@ -24,9 +26,12 @@ export class SessionFactory {
     return session;
   }
 
-  private createPromptFromRaw(rawMessage: RawMessage, sessionId: SessionId): Prompt {
+  private createPromptFromRaw(
+    rawMessage: RawMessage,
+    sessionId: SessionId,
+  ): Prompt {
     const role = this.mapRole(rawMessage.role);
-    
+
     return new Prompt({
       sessionId,
       role,
@@ -38,7 +43,7 @@ export class SessionFactory {
 
   private mapRole(rawRole: string): Role {
     const normalizedRole = rawRole.toLowerCase();
-    
+
     switch (normalizedRole) {
       case 'user':
       case 'human':

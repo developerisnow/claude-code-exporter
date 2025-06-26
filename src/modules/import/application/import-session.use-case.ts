@@ -1,6 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject } from '@nestjs/common';
 import { EventBus } from '@nestjs/cqrs';
-import { Session } from '../../sessions/domain/session.entity';
 import { ISessionRepository } from '../../sessions/domain/session.repository.interface';
 import { IPromptRepository } from '../../prompts/domain/prompt.repository.interface';
 import { SessionFactory } from '../domain/session.factory';
@@ -13,8 +12,11 @@ export class ImportSessionUseCase {
   private readonly logger = new Logger(ImportSessionUseCase.name);
 
   constructor(
+    @Inject('IClaudeSessionParser')
     private readonly parser: IClaudeSessionParser,
+    @Inject('ISessionRepository')
     private readonly sessionRepository: ISessionRepository,
+    @Inject('IPromptRepository')
     private readonly promptRepository: IPromptRepository,
     private readonly sessionFactory: SessionFactory,
     private readonly eventBus: EventBus,
@@ -26,7 +28,7 @@ export class ImportSessionUseCase {
     try {
       // Parse raw session data from Claude directory
       const rawSessions = await this.parser.parse(command.projectPath);
-      
+
       if (rawSessions.length === 0) {
         return new ImportResult({
           sessionCount: 0,
@@ -48,10 +50,11 @@ export class ImportSessionUseCase {
         try {
           // Skip if already imported and not forcing
           if (!command.force) {
-            const existingSession = await this.sessionRepository.findByProjectPath(
-              rawData.projectPath,
-            );
-            
+            const existingSession =
+              await this.sessionRepository.findByProjectPath(
+                rawData.projectPath,
+              );
+
             if (existingSession.length > 0) {
               this.logger.debug('Session already imported, skipping', {
                 projectPath: rawData.projectPath,
@@ -62,28 +65,28 @@ export class ImportSessionUseCase {
 
           // Create domain entities
           const session = this.sessionFactory.createFromRaw(rawData);
-          
+
           // Save session
           await this.sessionRepository.save(session);
-          
+
           // Save prompts
           const prompts = session.getPrompts();
           if (prompts.length > 0) {
             await this.promptRepository.saveMany([...prompts]);
           }
-          
+
           // Mark as imported and collect events
           session.markAsImported();
-          
+
           // Publish domain events
           const events = session.getUncommittedEvents();
           for (const event of events) {
             await this.eventBus.publish(event);
           }
-          
+
           results.sessionCount++;
           results.promptCount += prompts.length;
-          
+
           this.logger.log('Session imported successfully', {
             sessionId: session.id.toString(),
             promptCount: prompts.length,
@@ -92,7 +95,7 @@ export class ImportSessionUseCase {
           const errorMessage = `Failed to import session: ${error.message}`;
           results.errors.push(errorMessage);
           this.logger.error(errorMessage, error.stack);
-          
+
           if (!command.continueOnError) {
             throw error;
           }
@@ -100,7 +103,7 @@ export class ImportSessionUseCase {
       }
 
       const duration = Date.now() - startTime;
-      
+
       return new ImportResult({
         sessionCount: results.sessionCount,
         promptCount: results.promptCount,

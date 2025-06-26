@@ -1,49 +1,40 @@
 import {
   Entity,
-  PrimaryGeneratedColumn,
   Column,
+  PrimaryColumn,
+  ManyToMany,
   CreateDateColumn,
   UpdateDateColumn,
-  ManyToMany,
   Index,
-  Unique,
 } from 'typeorm';
 import { PromptEntity } from './prompt.entity';
 
-interface TopicRules {
-  keywords: string[];
-  patterns: string[];
-  excludeKeywords: string[];
-}
-
 @Entity('topics')
-@Unique(['name'])
-@Index('idx_topics_name', ['name'])
-@Index('idx_topics_created_at', ['createdAt'])
+@Index(['name', 'project_path'], { unique: true })
 export class TopicEntity {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryColumn('uuid')
   id: string;
 
-  @Column({ type: 'varchar', length: 200 })
+  @Column('text')
   name: string;
 
-  @Column({ type: 'text', nullable: true })
+  @Column('text')
+  project_path: string;
+
+  @Column('text', { nullable: true })
   description: string | null;
 
-  @Column({
-    type: 'jsonb',
-    default: { keywords: [], patterns: [], excludeKeywords: [] },
-  })
-  rules: TopicRules;
+  @Column('integer', { default: 0 })
+  prompt_count: number;
 
-  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
-  createdAt: Date;
+  @Column('timestamp', { nullable: true })
+  last_active_at: Date | null;
 
-  @Column({ name: 'created_by', type: 'varchar', length: 255, nullable: true })
-  createdBy: string | null;
+  @CreateDateColumn()
+  created_at: Date;
 
-  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
-  updatedAt: Date;
+  @UpdateDateColumn()
+  updated_at: Date;
 
   @ManyToMany(() => PromptEntity, (prompt) => prompt.topics)
   prompts: PromptEntity[];

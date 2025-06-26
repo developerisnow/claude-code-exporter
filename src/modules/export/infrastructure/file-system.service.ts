@@ -29,11 +29,11 @@ export class FileSystemService {
 
   async listFiles(dirPath: string, extension?: string): Promise<string[]> {
     const files = await fs.readdir(dirPath);
-    
+
     if (extension) {
-      return files.filter(file => file.endsWith(extension));
+      return files.filter((file) => file.endsWith(extension));
     }
-    
+
     return files;
   }
 }

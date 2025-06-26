@@ -24,36 +24,36 @@ export class TypeOrmSessionRepository implements ISessionRepository {
     const entity = await this.repository.findOne({
       where: { id: id.toString() },
     });
-    
+
     return entity ? this.mapper.toDomain(entity) : null;
   }
 
   async findByProjectPath(path: string): Promise<Session[]> {
     const entities = await this.repository.find({
-      where: { projectPath: path },
-      order: { createdAt: 'ASC' },
+      where: { project_path: path },
+      order: { created_at: 'ASC' },
     });
-    
-    return entities.map(entity => this.mapper.toDomain(entity));
+
+    return entities.map((entity) => this.mapper.toDomain(entity));
   }
 
   async findByDateRange(start: Date, end: Date): Promise<Session[]> {
     const entities = await this.repository
       .createQueryBuilder('session')
-      .where('session.createdAt >= :start', { start })
-      .andWhere('session.createdAt <= :end', { end })
-      .orderBy('session.createdAt', 'ASC')
+      .where('session.created_at >= :start', { start })
+      .andWhere('session.created_at <= :end', { end })
+      .orderBy('session.created_at', 'ASC')
       .getMany();
-    
-    return entities.map(entity => this.mapper.toDomain(entity));
+
+    return entities.map((entity) => this.mapper.toDomain(entity));
   }
 
   async findAll(): Promise<Session[]> {
     const entities = await this.repository.find({
-      order: { createdAt: 'ASC' },
+      order: { created_at: 'ASC' },
     });
-    
-    return entities.map(entity => this.mapper.toDomain(entity));
+
+    return entities.map((entity) => this.mapper.toDomain(entity));
   }
 
   async delete(id: SessionId): Promise<void> {
@@ -64,7 +64,7 @@ export class TypeOrmSessionRepository implements ISessionRepository {
     const count = await this.repository.count({
       where: { id: id.toString() },
     });
-    
+
     return count > 0;
   }
 

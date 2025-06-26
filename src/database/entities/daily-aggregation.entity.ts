@@ -1,42 +1,39 @@
 import {
   Entity,
   Column,
+  PrimaryColumn,
   CreateDateColumn,
   UpdateDateColumn,
-  PrimaryColumn,
   Index,
 } from 'typeorm';
 
 @Entity('daily_aggregations')
-@Index('idx_daily_aggregations_date', ['date'])
+@Index(['project_path', 'date'], { unique: true })
 export class DailyAggregationEntity {
-  @PrimaryColumn({ type: 'date' })
-  date: string;
+  @PrimaryColumn('uuid')
+  id: string;
 
-  @Column({ name: 'session_count', type: 'int', default: 0 })
-  sessionCount: number;
+  @Column('text')
+  project_path: string;
 
-  @Column({ name: 'prompt_count', type: 'int', default: 0 })
-  promptCount: number;
+  @Column('date')
+  date: Date;
 
-  @Column({ name: 'user_prompt_count', type: 'int', default: 0 })
-  userPromptCount: number;
+  @Column('integer', { default: 0 })
+  prompt_count: number;
 
-  @Column({ name: 'assistant_prompt_count', type: 'int', default: 0 })
-  assistantPromptCount: number;
+  @Column('integer', { default: 0 })
+  session_count: number;
 
-  @Column({ name: 'avg_prompt_length', type: 'float', default: 0 })
-  avgPromptLength: number;
+  @Column('integer', { default: 0 })
+  topic_count: number;
 
-  @Column({ name: 'avg_word_count', type: 'float', default: 0 })
-  avgWordCount: number;
+  @Column('jsonb', { nullable: true })
+  metadata: Record<string, any> | null;
 
-  @Column({ name: 'topic_distribution', type: 'jsonb', default: {} })
-  topicDistribution: Record<string, number>;
+  @CreateDateColumn()
+  created_at: Date;
 
-  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
-  createdAt: Date;
-
-  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
-  updatedAt: Date;
+  @UpdateDateColumn()
+  updated_at: Date;
 }

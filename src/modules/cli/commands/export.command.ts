@@ -3,8 +3,11 @@ import { Logger } from '@nestjs/common';
 import * as readlineSync from 'readline-sync';
 import { ExportSessionUseCase } from '../../export/application/export-session.use-case';
 import { ExportSessionCommand } from '../../export/application/commands/export-session.command';
-import { ExportFormat, ExportMode } from '../../export/domain/export-format.enum';
-import * as ora from 'ora';
+import {
+  ExportFormat,
+  ExportMode,
+} from '../../export/domain/export-format.enum';
+import ora from 'ora';
 
 interface ExportOptions {
   path?: string;
@@ -21,6 +24,7 @@ interface ExportOptions {
 
 @Command({
   name: 'export',
+  aliases: ['*'], // Make it the default command
   description: 'Export Claude Code sessions (backward compatible)',
 })
 export class ExportCommand extends CommandRunner {
@@ -34,7 +38,7 @@ export class ExportCommand extends CommandRunner {
     // Handle backward compatibility - default export command
     const projectPath = options.path || passedParams[0] || process.cwd();
     const outputPath = options.output || 'claude-prompts';
-    
+
     // Determine export mode from CLI flags
     let exportMode: ExportMode | null = null;
     if (options.prompts) {
@@ -58,8 +62,13 @@ export class ExportCommand extends CommandRunner {
       if (!exportMode) {
         exportMode = await this.promptForExportMode();
       }
-      
-      if (exportFormat === ExportFormat.MARKDOWN && !options.markdown && !options.json && !options.both) {
+
+      if (
+        exportFormat === ExportFormat.MARKDOWN &&
+        !options.markdown &&
+        !options.json &&
+        !options.both
+      ) {
         exportFormat = await this.promptForExportFormat();
       }
     } else {
@@ -98,57 +107,68 @@ export class ExportCommand extends CommandRunner {
     }
   }
 
-  private async promptForExportMode(): Promise<ExportMode> {
+  private promptForExportMode(): ExportMode {
     console.log('\nChoose a mode:');
     console.log('1) Prompts Only');
     console.log('2) Outputs Only');
-    console.log('3) Both: Prompts and Outputs');
+    console.log('3) Full Conversation');
     console.log('Defaulting to: 1) Prompts Only');
-    
-    const answer = readlineSync.question('What do you want to export? [1-3]: ', {
-      defaultInput: '1',
-    });
+
+    const answer = readlineSync.question(
+      'What do you want to export? [1-3]: ',
+      {
+        defaultInput: '1',
+      },
+    );
     const choice = parseInt(answer) || 1;
-    
+
     const modes = [
       ExportMode.PROMPTS_ONLY,
       ExportMode.OUTPUTS_ONLY,
       ExportMode.FULL_CONVERSATION,
     ];
     const selected = modes[Math.min(Math.max(choice - 1, 0), 2)];
-    
+
     const labels = {
       [ExportMode.PROMPTS_ONLY]: 'Prompts Only',
       [ExportMode.OUTPUTS_ONLY]: 'Outputs Only',
-      [ExportMode.FULL_CONVERSATION]: 'Both: Prompts and Outputs',
+      [ExportMode.FULL_CONVERSATION]: 'Full Conversation',
     };
-    
-    console.log(`Using: ${Math.min(Math.max(choice, 1), 3)}) ${labels[selected]}\n`);
+
+    console.log(
+      `Using: ${Math.min(Math.max(choice, 1), 3)}) ${labels[selected]}\n`,
+    );
     return selected;
   }
 
-  private async promptForExportFormat(): Promise<ExportFormat> {
+  private promptForExportFormat(): ExportFormat {
     console.log('\nChoose a format:');
     console.log('1) Markdown');
     console.log('2) JSON');
     console.log('3) Both: Markdown and JSON');
     console.log('Defaulting to: 1) Markdown');
-    
+
     const answer = readlineSync.question('What format do you want? [1-3]: ', {
       defaultInput: '1',
     });
     const choice = parseInt(answer) || 1;
-    
-    const formats = [ExportFormat.MARKDOWN, ExportFormat.JSON, ExportFormat.BOTH];
+
+    const formats = [
+      ExportFormat.MARKDOWN,
+      ExportFormat.JSON,
+      ExportFormat.BOTH,
+    ];
     const selected = formats[Math.min(Math.max(choice - 1, 0), 2)];
-    
+
     const labels = {
       [ExportFormat.MARKDOWN]: 'Markdown',
       [ExportFormat.JSON]: 'JSON',
       [ExportFormat.BOTH]: 'Both: Markdown and JSON',
     };
-    
-    console.log(`Using: ${Math.min(Math.max(choice, 1), 3)}) ${labels[selected]}\n`);
+
+    console.log(
+      `Using: ${Math.min(Math.max(choice, 1), 3)}) ${labels[selected]}\n`,
+    );
     return selected;
   }
 

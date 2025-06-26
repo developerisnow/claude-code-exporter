@@ -24,10 +24,10 @@ export class JsonExporter {
         metadata: session.metadata,
         statistics: {
           totalPrompts: prompts.length,
-          userPrompts: prompts.filter(p => p.isUserRole()).length,
-          assistantPrompts: prompts.filter(p => p.isAssistantRole()).length,
+          userPrompts: prompts.filter((p) => p.isUserRole()).length,
+          assistantPrompts: prompts.filter((p) => p.isAssistantRole()).length,
         },
-        messages: prompts.map(prompt => ({
+        messages: prompts.map((prompt) => ({
           role: prompt.role,
           content: prompt.content,
           timestamp: prompt.timestamp.toISOString(),
@@ -39,7 +39,7 @@ export class JsonExporter {
         })),
       })),
     };
-    
+
     return JSON.stringify(exportObject, null, 2);
   }
 }

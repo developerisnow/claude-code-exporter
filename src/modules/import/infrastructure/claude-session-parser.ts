@@ -1,6 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
 import * as fs from 'fs/promises';
-import * as fsSync from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import {
@@ -16,7 +15,7 @@ export class ClaudeSessionParser implements IClaudeSessionParser {
   async parse(projectPath: string): Promise<RawSessionData[]> {
     const claudeHome = await this.resolveClaudeHome();
     const sessionDir = await this.findSessionDirectory(projectPath, claudeHome);
-    
+
     if (!sessionDir) {
       return [];
     }
@@ -72,28 +71,26 @@ export class ClaudeSessionParser implements IClaudeSessionParser {
       // Try to find by project name
       const projectName = path.basename(projectPath);
       const dirs = await fs.readdir(projectsDir);
-      
-      const candidates = dirs.filter(dir => dir.includes(projectName));
+
+      const candidates = dirs.filter((dir) => dir.includes(projectName));
       if (candidates.length > 0) {
         // Use the first match
         return path.join(projectsDir, candidates[0]);
       }
-      
+
       return null;
     }
   }
 
   private encodePath(projectPath: string): string {
-    return projectPath
-      .replace(/\//g, '-')
-      .replace(/_/g, '-');
+    return projectPath.replace(/\//g, '-').replace(/_/g, '-');
   }
 
   private async findSessionFiles(sessionDir: string): Promise<string[]> {
     const files = await fs.readdir(sessionDir);
     return files
-      .filter(file => file.endsWith('.jsonl'))
-      .map(file => path.join(sessionDir, file));
+      .filter((file) => file.endsWith('.jsonl'))
+      .map((file) => path.join(sessionDir, file));
   }
 
   private async parseSessionFile(
@@ -102,7 +99,7 @@ export class ClaudeSessionParser implements IClaudeSessionParser {
   ): Promise<RawSessionData | null> {
     const sessionId = path.basename(filepath, '.jsonl');
     const content = await fs.readFile(filepath, 'utf8');
-    const lines = content.split('\n').filter(line => line.trim());
+    const lines = content.split('\n').filter((line) => line.trim());
 
     const messages: RawMessage[] = [];
 

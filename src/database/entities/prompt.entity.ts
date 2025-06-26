@@ -1,13 +1,13 @@
 import {
   Entity,
-  PrimaryGeneratedColumn,
   Column,
-  CreateDateColumn,
+  PrimaryColumn,
   ManyToOne,
   ManyToMany,
-  JoinColumn,
   JoinTable,
-  Index,
+  CreateDateColumn,
+  UpdateDateColumn,
+  JoinColumn,
 } from 'typeorm';
 import { SessionEntity } from './session.entity';
 import { TopicEntity } from './topic.entity';
@@ -19,68 +19,46 @@ export enum PromptRole {
 }
 
 @Entity('prompts')
-@Index('idx_prompts_session_id', ['sessionId'])
-@Index('idx_prompts_timestamp', ['timestamp'])
-@Index('idx_prompts_role', ['role'])
-@Index('idx_prompts_session_timestamp', ['sessionId', 'timestamp'])
 export class PromptEntity {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryColumn('uuid')
   id: string;
 
-  @Column({ name: 'session_id', type: 'uuid' })
-  sessionId: string;
+  @Column('uuid')
+  session_id: string;
 
-  @Column({
-    type: 'enum',
-    enum: PromptRole,
-  })
-  role: PromptRole;
+  @Column('text')
+  role: string;
 
-  @Column({ type: 'text' })
+  @Column('text')
   content: string;
 
-  @Column({ type: 'timestamptz' })
+  @Column('timestamp')
   timestamp: Date;
 
-  @Column({ type: 'jsonb', default: {} })
-  metadata: Record<string, any>;
+  @Column('integer')
+  sequence_number: number;
 
-  @Column({
-    name: 'content_length',
-    type: 'int',
-    generatedType: 'STORED',
-    asExpression: 'LENGTH(content)',
-  })
-  contentLength: number;
+  @Column('integer', { default: 0 })
+  file_count: number;
 
-  @Column({
-    name: 'word_count',
-    type: 'int',
-    generatedType: 'STORED',
-    asExpression: `array_length(string_to_array(regexp_replace(content, '[^\\w\\s]', '', 'g'), ' '), 1)`,
-  })
-  wordCount: number;
+  @Column('jsonb', { nullable: true })
+  metadata: Record<string, any> | null;
 
-  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
-  createdAt: Date;
+  @CreateDateColumn()
+  created_at: Date;
 
-  @ManyToOne(() => SessionEntity, (session) => session.prompts, {
-    onDelete: 'CASCADE',
-  })
+  @UpdateDateColumn()
+  updated_at: Date;
+
+  @ManyToOne(() => SessionEntity, (session) => session.prompts)
   @JoinColumn({ name: 'session_id' })
   session: SessionEntity;
 
   @ManyToMany(() => TopicEntity, (topic) => topic.prompts)
   @JoinTable({
     name: 'prompt_topics',
-    joinColumn: {
-      name: 'prompt_id',
-      referencedColumnName: 'id',
-    },
-    inverseJoinColumn: {
-      name: 'topic_id',
-      referencedColumnName: 'id',
-    },
+    joinColumn: { name: 'prompt_id', referencedColumnName: 'id' },
+    inverseJoinColumn: { name: 'topic_id', referencedColumnName: 'id' },
   })
   topics: TopicEntity[];
 }

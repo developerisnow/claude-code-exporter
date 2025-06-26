@@ -64,7 +64,7 @@ describe('AggregateByProjectUseCase', () => {
       ];
 
       sessionRepository.findAll.mockResolvedValue(sessions);
-      
+
       for (const session of sessions) {
         const prompts = createPrompts(session.id, 2);
         promptRepository.findBySessionId.mockResolvedValueOnce(prompts);
@@ -98,7 +98,7 @@ describe('AggregateByProjectUseCase', () => {
 
       const session = createSession('/project1');
       sessionRepository.findAll.mockResolvedValue([session]);
-      
+
       const prompts = createPrompts(session.id, 1);
       promptRepository.findBySessionId.mockResolvedValue(prompts);
 
@@ -125,7 +125,7 @@ describe('AggregateByProjectUseCase', () => {
 
       const session = createSession('/project1');
       sessionRepository.findAll.mockResolvedValue([session]);
-      
+
       const prompts = createPrompts(session.id, 1);
       promptRepository.findBySessionId.mockResolvedValue(prompts);
 

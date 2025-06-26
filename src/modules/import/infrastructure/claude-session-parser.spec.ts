@@ -2,7 +2,6 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ClaudeSessionParser } from './claude-session-parser';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { RawSessionData } from '../domain/claude-session-parser.interface';
 
 jest.mock('fs/promises');
 jest.mock('fs');
@@ -30,22 +29,25 @@ describe('ClaudeSessionParser', () => {
       const projectPath = '/Users/test/project';
       const claudeHome = '/Users/test/.claude';
       const encodedPath = '-Users-test-project';
-      const sessionDir = path.join(claudeHome, 'projects', encodedPath);
-      
+
       mockFs.access.mockResolvedValue(undefined);
-      mockFs.readdir.mockResolvedValueOnce(['session1.jsonl', 'session2.jsonl', 'other.txt'] as any);
-      
+      mockFs.readdir.mockResolvedValueOnce([
+        'session1.jsonl',
+        'session2.jsonl',
+        'other.txt',
+      ] as any);
+
       const mockSessionData = [
         JSON.stringify({
           message: { role: 'user', content: 'Hello' },
-          timestamp: '2024-01-01T00:00:00Z'
+          timestamp: '2024-01-01T00:00:00Z',
         }),
         JSON.stringify({
           message: { role: 'assistant', content: 'Hi there!' },
-          timestamp: '2024-01-01T00:00:01Z'
-        })
+          timestamp: '2024-01-01T00:00:01Z',
+        }),
       ].join('\n');
-      
+
       mockFs.readFile.mockResolvedValue(mockSessionData);
 
       // When
@@ -59,14 +61,14 @@ describe('ClaudeSessionParser', () => {
           {
             role: 'user',
             content: 'Hello',
-            timestamp: '2024-01-01T00:00:00Z'
+            timestamp: '2024-01-01T00:00:00Z',
           },
           {
             role: 'assistant',
             content: 'Hi there!',
-            timestamp: '2024-01-01T00:00:01Z'
-          }
-        ]
+            timestamp: '2024-01-01T00:00:01Z',
+          },
+        ],
       });
     });
 
@@ -88,16 +90,16 @@ describe('ClaudeSessionParser', () => {
       const projectPath = '/Users/test/project';
       mockFs.access.mockResolvedValue(undefined);
       mockFs.readdir.mockResolvedValueOnce(['session.jsonl'] as any);
-      
+
       const mockSessionData = [
         'invalid json',
         JSON.stringify({
           message: { role: 'user', content: 'Valid message' },
-          timestamp: '2024-01-01T00:00:00Z'
+          timestamp: '2024-01-01T00:00:00Z',
         }),
-        '{ broken json'
+        '{ broken json',
       ].join('\n');
-      
+
       mockFs.readFile.mockResolvedValue(mockSessionData);
 
       // When
@@ -114,11 +116,11 @@ describe('ClaudeSessionParser', () => {
       const projectPath = '/Users/test/project';
       mockFs.access.mockResolvedValue(undefined);
       mockFs.readdir.mockResolvedValueOnce(['session.jsonl'] as any);
-      
+
       const mockSessionData = JSON.stringify({
-        message: { role: 'user', content: 'No timestamp' }
+        message: { role: 'user', content: 'No timestamp' },
       });
-      
+
       mockFs.readFile.mockResolvedValue(mockSessionData);
 
       // When
@@ -135,14 +137,16 @@ describe('ClaudeSessionParser', () => {
       mockFs.access.mockRejectedValue(new Error('ENOENT'));
 
       // When/Then
-      await expect(parser.parse(projectPath)).rejects.toThrow('Claude home directory not found');
+      await expect(parser.parse(projectPath)).rejects.toThrow(
+        'Claude home directory not found',
+      );
     });
 
     it('should encode project path correctly', async () => {
       // Given
       const projectPath = '/Users/test/__Repositories/my_project';
       const expectedEncoded = '-Users-test---Repositories-my-project';
-      
+
       mockFs.access.mockResolvedValue(undefined);
       mockFs.readdir.mockResolvedValueOnce([] as any);
 
@@ -151,7 +155,7 @@ describe('ClaudeSessionParser', () => {
 
       // Then
       expect(mockFs.readdir).toHaveBeenCalledWith(
-        expect.stringContaining(expectedEncoded)
+        expect.stringContaining(expectedEncoded),
       );
     });
   });

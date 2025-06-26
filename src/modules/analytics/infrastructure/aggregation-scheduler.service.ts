@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Cron, CronExpression } from '@nestjs/schedule';
+import { Cron } from '@nestjs/schedule';
 import { ConfigService } from '@nestjs/config';
 import { AggregateByProjectUseCase } from '../application/aggregate-by-project.use-case';
 import { AggregateByProjectCommand } from '../application/commands/aggregate-by-project.command';
@@ -14,9 +14,15 @@ export class AggregationSchedulerService {
     private readonly aggregateByProjectUseCase: AggregateByProjectUseCase,
     private readonly configService: ConfigService,
   ) {
-    this.isEnabled = this.configService.get<boolean>('aggregation.enabled', false);
-    this.outputPath = this.configService.get<string>('aggregation.outputPath', './aggregated');
-    
+    this.isEnabled = this.configService.get<boolean>(
+      'app.aggregation.enabled',
+      { infer: true },
+    );
+    this.outputPath = this.configService.get<string>(
+      'app.aggregation.outputPath',
+      { infer: true },
+    ) || './aggregated';
+
     if (this.isEnabled) {
       this.logger.log('Aggregation scheduler enabled');
     }
@@ -29,15 +35,15 @@ export class AggregationSchedulerService {
     }
 
     this.logger.debug('Starting scheduled aggregation');
-    
+
     try {
       const command = new AggregateByProjectCommand({
         outputPath: this.outputPath,
         appendOnly: true, // Always append in cron jobs
       });
-      
+
       const result = await this.aggregateByProjectUseCase.execute(command);
-      
+
       if (result.hasData()) {
         this.logger.log(
           `Aggregation completed: ${result.projectsAggregated} projects, ${result.totalPrompts} prompts`,

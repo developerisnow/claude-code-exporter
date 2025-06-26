@@ -1,5 +1,9 @@
 import { AggregateRoot } from '../../common/domain/aggregate-root';
-import { PromptId, SessionId, TopicId } from '../../common/domain/value-objects';
+import {
+  PromptId,
+  SessionId,
+  TopicId,
+} from '../../common/domain/value-objects';
 import { PromptAddedEvent } from './events/prompt-added.event';
 import { TopicAssignedEvent } from './events/topic-assigned.event';
 import { TopicAssignment } from './topic-assignment.vo';
@@ -21,6 +25,7 @@ export interface CreatePromptParams {
   content: string;
   timestamp: Date;
   metadata?: PromptMetadata;
+  sequenceNumber?: number;
 }
 
 export class Prompt extends AggregateRoot {
@@ -30,6 +35,7 @@ export class Prompt extends AggregateRoot {
   readonly content: string;
   readonly timestamp: Date;
   readonly metadata: PromptMetadata;
+  readonly sequenceNumber: number;
   private topics: TopicAssignment[] = [];
 
   constructor(params: CreatePromptParams) {
@@ -40,7 +46,8 @@ export class Prompt extends AggregateRoot {
     this.content = params.content;
     this.timestamp = params.timestamp;
     this.metadata = params.metadata || {};
-    
+    this.sequenceNumber = params.sequenceNumber || 0;
+
     this.validate();
   }
 
@@ -48,7 +55,7 @@ export class Prompt extends AggregateRoot {
     if (!this.content || this.content.trim().length === 0) {
       throw new Error('Prompt content is required');
     }
-    
+
     if (!Object.values(Role).includes(this.role)) {
       throw new Error(`Invalid role: ${this.role}`);
     }
@@ -58,20 +65,18 @@ export class Prompt extends AggregateRoot {
     if (confidence < 0 || confidence > 1) {
       throw new Error('Topic confidence must be between 0 and 1');
     }
-    
-    const existingAssignment = this.topics.find(
-      t => t.topicId.equals(topicId)
+
+    const existingAssignment = this.topics.find((t) =>
+      t.topicId.equals(topicId),
     );
-    
+
     if (existingAssignment) {
       throw new Error('Topic already assigned to this prompt');
     }
-    
+
     this.topics.push(new TopicAssignment(topicId, confidence));
-    
-    this.addDomainEvent(
-      new TopicAssignedEvent(this.id, topicId, confidence),
-    );
+
+    this.addDomainEvent(new TopicAssignedEvent(this.id, topicId, confidence));
   }
 
   getTopics(): readonly TopicAssignment[] {
@@ -87,7 +92,7 @@ export class Prompt extends AggregateRoot {
   }
 
   getHighConfidenceTopics(minConfidence: number = 0.8): TopicAssignment[] {
-    return this.topics.filter(t => t.confidence >= minConfidence);
+    return this.topics.filter((t) => t.confidence >= minConfidence);
   }
 
   getContentLength(): number {
@@ -95,9 +100,7 @@ export class Prompt extends AggregateRoot {
   }
 
   getWordCount(): number {
-    return this.content
-      .split(/\s+/)
-      .filter(word => word.length > 0).length;
+    return this.content.split(/\s+/).filter((word) => word.length > 0).length;
   }
 
   isUserRole(): boolean {

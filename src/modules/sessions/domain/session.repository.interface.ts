@@ -6,6 +6,7 @@ export interface ISessionRepository {
   findById(id: SessionId): Promise<Session | null>;
   findByProjectPath(path: string): Promise<Session[]>;
   findByDateRange(start: Date, end: Date): Promise<Session[]>;
+  findAll(): Promise<Session[]>;
   delete(id: SessionId): Promise<void>;
   exists(id: SessionId): Promise<boolean>;
   count(): Promise<number>;
