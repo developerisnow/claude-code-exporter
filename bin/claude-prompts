@@ -47,7 +47,7 @@ EXAMPLES:
   claude-prompts -V /path/to/project         # Verbose output
   claude-prompts --claude-home ~/.config/claude /path/to/project
 
-For more information, visit: https://github.com/yourusername/claude-code-exporter
+For more information, visit: https://github.com/developerisnow/claude-code-exporter
 `;
 
 function parseArgs(args) {

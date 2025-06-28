@@ -5,3 +5,8 @@ claude-prompts/
 .claude/
 test-output/
 test-output-*/
+dist/
+.env
+test-*.js
+test-*.py
+v1-deprecated/

@@ -348,7 +348,7 @@ Contributions are welcome! Please follow these steps:
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/claude-code-exporter.git
+git clone https://github.com/developerisnow/claude-code-exporter.git
 cd claude-code-exporter
 
 # Install dependencies
@@ -374,7 +374,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 📚 Resources
 
 - [Claude Code Documentation](https://claude.ai/docs)
-- [Report Issues](https://github.com/yourusername/claude-code-exporter/issues)
+- [Report Issues](https://github.com/developerisnow/claude-code-exporter/issues)
 - [NPM Package](https://www.npmjs.com/package/claude-code-exporter)
 
 ---
