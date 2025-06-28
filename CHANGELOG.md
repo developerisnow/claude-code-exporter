@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2025-06-28
+
+### Added
+- 🎉 **Aggregate Mode** - Combine prompts across all projects with `--aggregate`
+- 📅 **Period Filtering** - Filter sessions by time period (e.g., `--period=7d`, `2w`, `3m`, `1y`)
+- 🗓️ **Period Grouping** - Group exports by days, weeks, months, or years with `--periodGroup`
+- 📁 **Nested Structure** - Create organized folder hierarchy with `--nested`
+- 🏠 **Both Directories** - Process both Claude configs simultaneously with `--both-dirs`
+- 🔧 **Environment Variables** - Support for `AGGREGATE_NESTED` and `AGGREGATE_BOTH`
+- 📊 **Enhanced Aggregation** - Smart defaults and automatic mode selection
+
+### Changed
+- 🚀 Major version bump for significant new features
+- 📦 Updated repository URLs to correct GitHub location
+- 👤 Added author field to package.json
+- 🧹 Improved .npmignore for cleaner npm packages
+- 📝 Completely redesigned README with better structure and emojis
+- 🎯 Made aggregate the default when no project path provided
+
+### Fixed
+- 🔐 Removed hardcoded credentials (now uses environment variables)
+- 🐛 Fixed interactive mode option 3 for both directories
+- 📁 Fixed nested aggregate structure to match user expectations
+- 🏷️ Fixed file naming conventions in aggregate mode
+
 ## [1.3.0] - 2025-06-24
 
 ### Added
