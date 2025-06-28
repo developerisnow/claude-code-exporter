@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [14.x, 16.x, 18.x, 20.x]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Check syntax
+      run: |
+        node -c lib/index.js
+        node -c mcp/server.js
+        node -c bin/claude-prompts
+    
+    - name: Create test Claude directory structure
+      run: |
+        mkdir -p ~/.config/claude/projects/test-project
+        echo '{"messages":[{"role":"user","content":"test"}]}' > ~/.config/claude/projects/test-project/session.json
+    
+    # Skip interactive tests in CI
+    - name: Test CLI help
+      run: |
+        node bin/claude-prompts --help
+        node bin/claude-prompts --version
+    
+    - name: Test MCP server syntax
+      run: node -c mcp/server.js
+
+  publish-ready:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Use Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18.x'
+    
+    - name: Check package.json
+      run: |
+        npm pack --dry-run
+        npm publish --dry-run

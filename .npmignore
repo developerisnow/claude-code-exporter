@@ -17,6 +17,7 @@ v1-deprecated/
 _v1-deprecated/
 claude-code-exporter-v2/
 memory-bank/
+mcp-exporter/
 *.spec.js
 *.spec.ts
 tsconfig.json

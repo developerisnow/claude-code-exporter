@@ -17,6 +17,7 @@ Export and aggregate Claude Code conversations with powerful filtering and organ
 - [x] 🎯 **Smart Organization** - Timestamp-based directories with clear naming
 - [x] 💬 **Interactive Mode** - User-friendly prompts with defaults
 - [x] 🔧 **CLI & API** - Use as command-line tool or Node.js library
+- [x] 🤖 **MCP Server** - Model Context Protocol support for Claude Desktop (v2.0.1+)
 
 ## 🚀 Quick Start
 
@@ -176,6 +177,31 @@ aggregated-prompts/
 └── 2025-06M/     # Monthly groups
     └── sessions...
 ```
+
+## 🤖 MCP Server Integration (v2.0.1+)
+
+### Setup for Claude Desktop
+
+1. Install the package globally:
+```bash
+npm install -g claude-code-exporter
+```
+
+2. Add to Claude Desktop config (`~/Library/Application Support/Claude/claude_desktop_config.json`):
+```json
+{
+  "mcpServers": {
+    "claude-code-exporter": {
+      "command": "npx",
+      "args": ["claude-code-exporter", "mcp"]
+    }
+  }
+}
+```
+
+3. Restart Claude Desktop and use tools:
+- "Use export_conversation to export my project at /path/to/project"
+- "Use aggregate_sessions to analyze all my Claude sessions"
 
 ## 🔧 Programmatic API
 

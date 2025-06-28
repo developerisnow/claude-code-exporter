@@ -271,5 +271,18 @@ function main() {
   }
 }
 
-// Run the CLI
-main();
+// Check if running as MCP server
+if (process.argv[2] === 'mcp') {
+  // Launch MCP server
+  const { spawn } = require('child_process');
+  const path = require('path');
+  const mcpPath = path.join(__dirname, '..', 'mcp', 'server.js');
+  const child = spawn('node', [mcpPath], {
+    stdio: 'inherit',
+    env: process.env
+  });
+  child.on('exit', (code) => process.exit(code || 0));
+} else {
+  // Run the CLI
+  main();
+}

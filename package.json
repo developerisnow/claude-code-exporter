@@ -1,13 +1,16 @@
 {
   "name": "claude-code-exporter",
   "version": "2.0.1",
-  "description": "Export Claude Code conversations to markdown or JSON with flexible modes and formats",
+  "description": "Export Claude Code conversations with CLI and MCP server support for Claude Desktop integration",
   "main": "lib/index.js",
   "bin": {
-    "claude-prompts": "bin/claude-prompts"
+    "claude-prompts": "bin/claude-prompts",
+    "claude-mcp": "mcp/server.js"
   },
   "scripts": {
-    "test": "node test/test.js"
+    "test": "node test/test-non-interactive.js",
+    "test:interactive": "node test/test.js",
+    "lint": "eslint lib/ mcp/ bin/"
   },
   "keywords": [
     "claude",
@@ -16,7 +19,11 @@
     "prompts",
     "markdown",
     "cli",
-    "anthropic"
+    "anthropic",
+    "mcp",
+    "model-context-protocol",
+    "claude-desktop",
+    "ai-tools"
   ],
   "author": "developerisnow",
   "license": "MIT",
@@ -33,5 +40,13 @@
   "homepage": "https://github.com/developerisnow/claude-code-exporter#readme",
   "dependencies": {
     "readline-sync": "^1.4.10"
+  },
+  "optionalDependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  },
+  "mcp": {
+    "server": "mcp/server.js",
+    "tools": ["export_conversation", "aggregate_sessions"],
+    "description": "MCP server for exporting Claude Code conversations"
   }
 }

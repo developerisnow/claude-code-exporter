@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.1] - 2025-06-28
+
+### Added
+- 🤖 **MCP Server Support** - Model Context Protocol integration for Claude Desktop
+- 📦 **Unified Package** - MCP server included in main package (no separate install needed)
+- 🔧 **Optional Dependencies** - MCP SDK as optional dependency for non-MCP users
+- 📝 **Enhanced Documentation** - MCP setup guide in README
+
+### Changed
+- 🚀 Improved package structure - MCP in `mcp/` subdirectory
+- 📦 Updated package metadata for better discoverability
+
 ## [2.0.0] - 2025-06-28
 
 ### Added

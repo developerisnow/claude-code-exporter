@@ -1,0 +1,115 @@
+{
+  "name": "claude-code-exporter",
+  "description": "Export and aggregate Claude Code conversations with powerful filtering and organization features",
+  "version": "2.0.1",
+  "author": "developerisnow",
+  "license": "MIT",
+  "homepage": "https://github.com/developerisnow/claude-code-exporter",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/developerisnow/claude-code-exporter.git"
+  },
+  "bugs": {
+    "url": "https://github.com/developerisnow/claude-code-exporter/issues"
+  },
+  "keywords": [
+    "claude",
+    "claude-code",
+    "export",
+    "prompts",
+    "markdown",
+    "cli",
+    "anthropic",
+    "mcp",
+    "model-context-protocol",
+    "claude-desktop",
+    "ai-tools",
+    "documentation",
+    "knowledge-management"
+  ],
+  "category": "developer-tools",
+  "subcategory": "documentation",
+  "features": [
+    "Multiple export modes (prompts/outputs/full)",
+    "Time-based filtering with period grouping",
+    "Export to Markdown, JSON, or both formats",
+    "Aggregate sessions across all projects",
+    "Interactive CLI with sensible defaults",
+    "Native MCP server integration"
+  ],
+  "tools": [
+    {
+      "name": "export_conversation",
+      "description": "Export Claude Code conversations from a specific project path",
+      "parameters": {
+        "projectPath": {
+          "type": "string",
+          "required": true,
+          "description": "Absolute path to the project directory"
+        },
+        "outputDir": {
+          "type": "string",
+          "required": false,
+          "default": "./claude-prompts",
+          "description": "Output directory for exported files"
+        },
+        "exportMode": {
+          "type": "enum",
+          "required": false,
+          "default": "prompts",
+          "options": ["prompts", "full", "outputs"],
+          "description": "Export mode"
+        },
+        "exportFormat": {
+          "type": "enum",
+          "required": false,
+          "default": "markdown",
+          "options": ["markdown", "json", "both"],
+          "description": "Export format"
+        }
+      }
+    },
+    {
+      "name": "aggregate_sessions",
+      "description": "Aggregate and analyze Claude Code sessions across multiple projects",
+      "parameters": {
+        "outputDir": {
+          "type": "string",
+          "required": false,
+          "default": "./aggregated-prompts",
+          "description": "Output directory for aggregated report"
+        },
+        "includeStats": {
+          "type": "boolean",
+          "required": false,
+          "default": true,
+          "description": "Include detailed statistics in output"
+        },
+        "groupBy": {
+          "type": "enum",
+          "required": false,
+          "default": "project",
+          "options": ["project", "date", "none"],
+          "description": "How to group sessions"
+        }
+      }
+    }
+  ],
+  "installation": {
+    "npm": {
+      "package": "claude-code-exporter",
+      "global": true
+    },
+    "mcp": {
+      "command": "npx",
+      "args": ["claude-code-exporter", "mcp"]
+    }
+  },
+  "requirements": {
+    "node": ">=14.0.0",
+    "mcp-sdk": "^1.0.0"
+  },
+  "screenshots": [],
+  "demo": null,
+  "documentation": "https://github.com/developerisnow/claude-code-exporter#readme"
+}
