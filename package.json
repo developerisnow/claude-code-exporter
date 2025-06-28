@@ -42,11 +42,14 @@
     "readline-sync": "^1.4.10"
   },
   "optionalDependencies": {
-    "@modelcontextprotocol/sdk": "^1.0.0"
+    "@modelcontextprotocol/sdk": "^1.13.2"
   },
   "mcp": {
     "server": "mcp/server.js",
-    "tools": ["export_conversation", "aggregate_sessions"],
+    "tools": [
+      "export_conversation",
+      "aggregate_sessions"
+    ],
     "description": "MCP server for exporting Claude Code conversations"
   }
 }
