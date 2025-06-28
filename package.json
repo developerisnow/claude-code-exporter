@@ -1,6 +1,6 @@
 {
   "name": "claude-code-exporter",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Export Claude Code conversations to markdown or JSON with flexible modes and formats",
   "main": "lib/index.js",
   "bin": {

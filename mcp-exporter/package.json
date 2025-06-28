@@ -1,0 +1,69 @@
+{
+  "name": "mcp-claude-exporter",
+  "version": "1.0.0",
+  "description": "Model Context Protocol server for exporting and aggregating Claude conversation data with advanced search and analytics",
+  "main": "index.js",
+  "type": "module",
+  "bin": {
+    "mcp-claude-exporter": "./index.js"
+  },
+  "scripts": {
+    "start": "node index.js",
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest",
+    "test:watch": "NODE_OPTIONS=--experimental-vm-modules jest --watch",
+    "test:coverage": "NODE_OPTIONS=--experimental-vm-modules jest --coverage",
+    "lint": "eslint index.js tests/**/*.js",
+    "validate": "node -c index.js",
+    "prepublishOnly": "npm test"
+  },
+  "keywords": [
+    "mcp",
+    "modelcontextprotocol",
+    "claude",
+    "anthropic",
+    "ai",
+    "llm",
+    "export",
+    "conversation",
+    "data-export",
+    "analytics",
+    "search",
+    "aggregation",
+    "claude-code",
+    "conversation-history"
+  ],
+  "author": "developerisnow <dev@example.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/developerisnow/claude-code-exporter.git"
+  },
+  "bugs": {
+    "url": "https://github.com/developerisnow/claude-code-exporter/issues"
+  },
+  "homepage": "https://github.com/developerisnow/claude-code-exporter/tree/main/mcp-exporter#readme",
+  "files": [
+    "index.js",
+    "exporter-wrapper.js",
+    "lib/**/*.js",
+    "examples/**/*",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "@jest/globals": "^29.7.0",
+    "eslint": "^8.57.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  }
+}
