@@ -1,5 +1,20 @@
 # Claude Code Exporter v2 - AI Development Guidelines
 
+# MEMORY-BANK
+- Use "./memory-bank/*" folder for storing all project specific files
+```bash
+project-path (branch)$ ❯ tree memory-bank
+memory-bank
+└── sessions
+    ├── 20250627-Fr__ccexporter
+    │   ├── {yyyymmdd-hhmm}-{title}.md
+    └── 20250628-Sa__ccexporter
+    │   ├── {yyyymmdd-hhmm}-{title}.md
+```
+
+# DOCS
+- Use "./docs/**/{yyyymmdd-hhmm}-{title}.md" folder for storing all project documentation not related to memory-bank, more common/global and not locally related to current tasks and sessions
+
 ## Project Overview
 This is a TypeScript/NestJS refactor of claude-code-exporter with database support, aggregation features, and dual CLI/API interfaces.
 

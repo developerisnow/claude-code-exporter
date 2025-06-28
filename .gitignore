@@ -10,7 +10,7 @@ pnpm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
-
+bin/
 # OS
 .DS_Store
 
@@ -39,3 +39,10 @@ lerna-debug.log*
 .env
 /ormconfig.json
 .codegpt
+
+# AI
+.specstory/
+
+# Old
+_v1-deprecated/
+v1-deprecated/

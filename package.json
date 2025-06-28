@@ -2,7 +2,7 @@
   "name": "claude-code-exporter",
   "version": "2.0.0",
   "description": "Export and aggregate Claude Code conversation sessions with TypeScript support",
-  "author": "",
+  "author": "developerisnow",
   "license": "MIT",
   "bin": {
     "claude-prompts": "./bin/claude-prompts",
@@ -39,6 +39,8 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "env-cmd jest --config ./test/jest-e2e.json",
+    "import:all": "ts-node -r tsconfig-paths/register src/scripts/import-all-providers.ts",
+    "import:stats": "ts-node -r tsconfig-paths/register src/scripts/import-and-stats.ts",
     "prepare": "is-ci || echo 'Skipping husky setup'",
     "release": "release-it"
   },
@@ -158,10 +160,10 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/claude-code-exporter"
+    "url": "https://github.com/developerisnow/claude-code-exporter"
   },
   "bugs": {
-    "url": "https://github.com/yourusername/claude-code-exporter/issues"
+    "url": "https://github.com/developerisnow/claude-code-exporter/issues"
   },
-  "homepage": "https://github.com/yourusername/claude-code-exporter#readme"
+  "homepage": "https://github.com/developerisnow/claude-code-exporter#readme"
 }

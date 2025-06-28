@@ -9,6 +9,7 @@ import { ImportModule } from './modules/import/import.module';
 import { ExportModule } from './modules/export/export.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { CliModule } from './modules/cli/cli.module';
+import { ProvidersModule } from './modules/providers/providers.module';
 import databaseConfig from './config/database.config';
 import appConfig from './config/app.config';
 
@@ -23,6 +24,7 @@ import appConfig from './config/app.config';
       useFactory: databaseConfig,
     }),
     ScheduleModule.forRoot(),
+    ProvidersModule,
     SessionsModule,
     PromptsModule,
     TopicsModule,

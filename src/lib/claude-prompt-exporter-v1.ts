@@ -33,6 +33,9 @@ export interface ExporterOptions {
   interactive?: boolean;
   timeout?: number;
   claudeHome?: string;
+  aggregate?: boolean;
+  period?: string;
+  periodGroup?: string;
 }
 
 export interface Message {
@@ -82,7 +85,10 @@ export class ClaudePromptExporterV1 {
       exportFormat: options.exportFormat || ExportFormat.MARKDOWN,
       interactive: options.interactive !== false, // Default true
       timeout: options.timeout || 10000, // 10 seconds
-      claudeHome: options.claudeHome || ''
+      claudeHome: options.claudeHome || '',
+      aggregate: options.aggregate || false,
+      period: options.period || '',
+      periodGroup: options.periodGroup || ''
     };
     
     // Resolve Claude home directory with support for multiple locations
@@ -156,24 +162,42 @@ export class ClaudePromptExporterV1 {
       console.log(`${index + 1}) ${home}`);
     });
     
-    // Prefer ~/.config/claude as default
-    const defaultIndex = availableHomes.findIndex(home => home.includes('.config/claude')) + 1 || 1;
-    console.log(`Defaulting to: ${defaultIndex}) ${availableHomes[defaultIndex - 1]}`);
+    // Add option for both directories when in aggregate mode
+    const bothIndex = availableHomes.length + 1;
+    if (this.options.aggregate) {
+      console.log(`${bothIndex}) Both directories`);
+    }
     
+    // Default based on mode
+    const defaultIndex = this.options.aggregate ? bothIndex : 
+      (availableHomes.findIndex(home => home.includes('.config/claude')) + 1 || 1);
+    
+    const defaultText = defaultIndex === bothIndex ? 'Both directories' : availableHomes[defaultIndex - 1];
+    console.log(`Defaulting to: ${defaultIndex}) ${defaultText}`);
+
     let index: number;
     if (this.options.interactive) {
-      // Note: readline-sync doesn't support actual timeouts
-      const answer = readlineSync.question(`Which would you like to use? [1-${availableHomes.length}]: `, {
+      const maxChoice = this.options.aggregate ? bothIndex : availableHomes.length;
+      const answer = readlineSync.question(`Which would you like to use? [1-${maxChoice}]: `, {
         defaultInput: defaultIndex.toString()
       });
       index = parseInt(answer) || defaultIndex;
-      if (index < 1 || index > availableHomes.length) {
+      if (index < 1 || index > maxChoice) {
         index = defaultIndex;
       }
     } else {
       index = defaultIndex;
     }
-    
+
+    // Handle both directories selection
+    if (this.options.aggregate && index === bothIndex) {
+      console.log(`Using: Both directories\n`);
+      // Set environment variable for aggregate to process both
+      process.env.AGGREGATE_BOTH = 'true';
+      // Return first directory as base (aggregate will handle both)
+      return availableHomes[0];
+    }
+
     const selected = availableHomes[index - 1];
     console.log(`Using: ${selected}\n`);
     return selected;
@@ -884,8 +908,41 @@ Export Date: ${new Date().toLocaleString()}
     console.log('Claude Session Aggregator\n');
     console.log(`Aggregating prompts from all projects...\n`);
 
-    // Find all project directories
-    const allProjects = this.findAllProjects(this.claudeHome);
+    // Parse period filter if specified
+    const dateRange = this.parsePeriod(this.options.period);
+    if (dateRange) {
+      console.log(`Filtering sessions from ${dateRange.start.toLocaleDateString()} to ${dateRange.end.toLocaleDateString()}\n`);
+    }
+
+    // Validate period group
+    if (this.options.periodGroup) {
+      this.validatePeriodGroup(this.options.period, this.options.periodGroup);
+    }
+
+    // Check if we should use nested structure based on format
+    // If user wants individual files (like regular export), create nested structure
+    const useNestedStructure = process.env.AGGREGATE_NESTED === 'true' || 
+                              this.options.exportFormat === ExportFormat.BOTH;
+
+    // Check if we should process both directories
+    const processBothDirectories = process.env.AGGREGATE_BOTH === 'true';
+    
+    let allProjects: string[] = [];
+    
+    if (processBothDirectories) {
+      // Detect and process both Claude directories
+      const availableHomes = this._detectClaudeHomes();
+      console.log(`Processing ${availableHomes.length} Claude directories...\n`);
+      
+      for (const home of availableHomes) {
+        const projectsPath = path.join(home, 'projects');
+        const projects = this.findAllProjects(projectsPath);
+        allProjects = allProjects.concat(projects);
+      }
+    } else {
+      // Use single directory
+      allProjects = this.findAllProjects(this.claudeHome);
+    }
     
     if (allProjects.length === 0) {
       console.log('No projects found.');
@@ -893,6 +950,15 @@ Export Date: ${new Date().toLocaleString()}
     }
 
     console.log(`Found ${allProjects.length} projects to aggregate.\n`);
+
+    // Apply period-based aggregation if specified
+    if (this.options.periodGroup) {
+      return this.aggregateByPeriod(absoluteOutputDir, allProjects, dateRange, useNestedStructure);
+    }
+
+    if (useNestedStructure) {
+      return this.aggregateNested(absoluteOutputDir, allProjects, dateRange);
+    }
 
     const aggregatedData: Map<string, any> = new Map();
     let totalPromptsAggregated = 0;
@@ -1139,6 +1205,544 @@ Export Date: ${new Date().toLocaleString()}
       fs.writeFileSync(path.join(outputDir, filename), content);
       console.log(`✓ ${projectData.projectName}: ${projectData.totalPrompts} prompts from ${projectData.sessionCount} sessions`);
     });
+  }
+
+  // New method for nested aggregate structure (as user expects)
+  private aggregateNested(outputDir: string, allProjects: string[], dateRange: { start: Date; end: Date } | null): ExportResult {
+    let totalMessagesExported = 0;
+    let totalSessionsProcessed = 0;
+    let projectsProcessed = 0;
+
+    // Process each project
+    allProjects.forEach(projectDir => {
+      const projectPath = this.decodeProjectPath(path.basename(projectDir));
+      const projectName = this.sanitizeFilename(path.basename(projectPath));
+      const projectTimestamp = this.getTimestamp();
+      const projectOutputDir = path.join(outputDir, `aggregated-${projectTimestamp}-${projectName}`);
+      
+      const sessions = this.getSessionFiles(projectDir);
+      if (sessions.length === 0) return;
+
+      let projectMessageCount = 0;
+      let projectSessionCount = 0;
+
+      // Process each session
+      sessions.forEach(sessionFile => {
+        // Check date range filter
+        if (!this.isSessionInDateRange(sessionFile, dateRange)) return;
+        
+        const sessionId = path.basename(sessionFile, '.jsonl');
+        
+        // Read and process full session data
+        const fullSessionData = this.processFullSessionForAggregate(sessionFile);
+        if (!fullSessionData) return;
+
+        // Generate session folder name from first message
+        const sessionTimestamp = this.extractSessionTimestamp(fullSessionData);
+        const sessionTitle = this.generateSessionTitle(fullSessionData);
+        const sessionFolderName = `${sessionTimestamp}-${sessionTitle}`;
+        const sessionOutputDir = path.join(projectOutputDir, sessionFolderName);
+        
+        // Create session directory
+        fs.mkdirSync(sessionOutputDir, { recursive: true });
+        
+        // Determine formats based on flags
+        const useMarkdownForAll = this.options.exportFormat === ExportFormat.MARKDOWN;
+        const defaultTextFormat = useMarkdownForAll ? 'md' : 'txt';
+        
+        // Extract different message types
+        const prompts = fullSessionData.messages.filter(m => m.role === 'user');
+        const outputs = fullSessionData.messages.filter(m => m.role === 'assistant');
+        
+        // Generate timestamp for files
+        const fileTimestamp = this.getTimestamp();
+        
+        // 1. Export prompts
+        if (prompts.length > 0) {
+          const promptsFilename = `prompts-${fileTimestamp}-${sessionTitle}-${sessionId}.md`;
+          const promptsContent = this.formatMessagesAsMarkdown(prompts, 'prompts', sessionId);
+          fs.writeFileSync(path.join(sessionOutputDir, promptsFilename), promptsContent);
+        }
+        
+        // 2. Export outputs  
+        if (outputs.length > 0) {
+          const outputsFilename = `outputs-${fileTimestamp}-${sessionTitle}-${sessionId}.${defaultTextFormat}`;
+          const outputsContent = useMarkdownForAll ? 
+            this.formatMessagesAsMarkdown(outputs, 'outputs', sessionId) :
+            this.formatMessagesAsText(outputs, 'outputs', sessionId);
+          fs.writeFileSync(path.join(sessionOutputDir, outputsFilename), outputsContent);
+        }
+        
+        // 3. Export full conversation
+        const fullFilename = `full-${fileTimestamp}-${sessionTitle}-${sessionId}.${defaultTextFormat}`;
+        const fullContent = useMarkdownForAll ?
+          this.formatMessagesAsMarkdown(fullSessionData.messages, 'full', sessionId) :
+          this.formatMessagesAsText(fullSessionData.messages, 'full', sessionId);
+        fs.writeFileSync(path.join(sessionOutputDir, fullFilename), fullContent);
+        
+        // 4. Always export JSON for full
+        const jsonFilename = `full-${fileTimestamp}-${sessionTitle}-${sessionId}.json`;
+        const jsonContent = {
+          sessionId,
+          projectName,
+          exportTimestamp: new Date().toISOString(),
+          messageCount: fullSessionData.messages.length,
+          messages: fullSessionData.messages
+        };
+        fs.writeFileSync(path.join(sessionOutputDir, jsonFilename), JSON.stringify(jsonContent, null, 2));
+        
+        projectMessageCount += fullSessionData.messages.length;
+        projectSessionCount++;
+        totalSessionsProcessed++;
+      });
+
+      if (projectMessageCount > 0) {
+        console.log(`✓ ${projectName}: ${projectMessageCount} messages from ${projectSessionCount} sessions`);
+        projectsProcessed++;
+        totalMessagesExported += projectMessageCount;
+      }
+    });
+
+    console.log(`\nAggregated ${projectsProcessed} projects (${totalMessagesExported} total messages from ${totalSessionsProcessed} sessions) to ${outputDir}/`);
+    
+    return {
+      sessionsExported: totalSessionsProcessed,
+      totalMessages: totalMessagesExported,
+      totalPrompts: totalMessagesExported
+    };
+  }
+
+  // Process full session for proper aggregate structure
+  private processFullSessionForAggregate(sessionFile: string): any {
+    const sessionId = path.basename(sessionFile, '.jsonl');
+    const messages: any[] = [];
+    
+    try {
+      const content = fs.readFileSync(sessionFile, 'utf8');
+      const lines = content.split('\n').filter(line => line.trim());
+      
+      lines.forEach((line) => {
+        try {
+          const data = JSON.parse(line);
+          if (data.message && data.message.role) {
+            const textContent = this.extractTextContent(data.message.content);
+            if (textContent && !this.isSystemGenerated(textContent)) {
+              messages.push({
+                role: data.message.role,
+                content: textContent,
+                timestamp: data.timestamp || new Date().toISOString()
+              });
+            }
+          }
+        } catch (e) {
+          // Skip invalid lines
+        }
+      });
+      
+      if (messages.length > 0) {
+        return {
+          sessionId,
+          messages
+        };
+      }
+    } catch (error) {
+      this.log(`Error processing session ${sessionId}: ${error.message}`);
+    }
+    
+    return null;
+  }
+
+  private extractSessionTimestamp(sessionData: any): string {
+    // Use first message timestamp to generate session timestamp
+    if (sessionData.messages && sessionData.messages.length > 0) {
+      const firstTimestamp = sessionData.messages[0].timestamp;
+      const date = new Date(firstTimestamp);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      return `${year}${month}${day}-${hours}${minutes}`;
+    }
+    return this.getTimestamp();
+  }
+
+  private generateSessionTitle(sessionData: any): string {
+    // Find first user message for title
+    const firstUserMessage = sessionData.messages.find((m: any) => m.role === 'user');
+    if (firstUserMessage) {
+      return this.generateTitleFromContent(firstUserMessage.content);
+    }
+    return 'session';
+  }
+
+  private formatMessagesAsMarkdown(messages: any[], type: string, sessionId: string): string {
+    let content = `# ${type.charAt(0).toUpperCase() + type.slice(1)} Export\n\n`;
+    content += `**Session ID**: ${sessionId}\n`;
+    content += `**Total Messages**: ${messages.length}\n\n`;
+    content += `---\n\n`;
+    
+    messages.forEach((msg, index) => {
+      const roleLabel = msg.role.charAt(0).toUpperCase() + msg.role.slice(1);
+      content += `## ${roleLabel} ${index + 1}\n\n`;
+      content += `> ${new Date(msg.timestamp).toLocaleString()}\n\n`;
+      content += '```\n';
+      content += msg.content;
+      content += '\n```\n\n';
+      if (index < messages.length - 1) {
+        content += '---\n\n';
+      }
+    });
+    
+    return content;
+  }
+
+  private formatMessagesAsText(messages: any[], type: string, sessionId: string): string {
+    let content = `${type.toUpperCase()} EXPORT\n`;
+    content += '='.repeat(50) + '\n\n';
+    content += `Session ID: ${sessionId}\n`;
+    content += `Total Messages: ${messages.length}\n\n`;
+    content += '='.repeat(50) + '\n\n';
+    
+    messages.forEach((msg, index) => {
+      content += `[${msg.role.toUpperCase()}] - ${new Date(msg.timestamp).toLocaleString()}\n`;
+      content += '-'.repeat(50) + '\n';
+      content += msg.content + '\n\n';
+    });
+    
+    return content;
+  }
+
+  private generateTitleFromContent(content: string): string {
+    return content
+      .split('\n')[0]
+      .replace(/^(drop it\.?|real|actually|honestly)[\s,.]*/i, '')
+      .trim()
+      .split(/[\s/]+/)
+      .slice(0, 3)
+      .join('-')
+      .replace(/[^a-zA-Z0-9-]/g, '')
+      .toLowerCase()
+      .slice(0, 30) || 'prompt';
+  }
+
+
+  // Period parsing and filtering methods
+  private parsePeriod(period: string): { start: Date; end: Date } | null {
+    if (!period) return null;
+    
+    const match = period.match(/^(\d+)([dwmy])$/);
+    if (!match) {
+      throw new Error(`Invalid period format: ${period}. Use format like 7d, 2w, 3m, 1y`);
+    }
+    
+    const [, amount, unit] = match;
+    const num = parseInt(amount);
+    const now = new Date();
+    const start = new Date();
+    
+    switch (unit) {
+      case 'd':
+        start.setDate(now.getDate() - num);
+        break;
+      case 'w':
+        start.setDate(now.getDate() - (num * 7));
+        break;
+      case 'm':
+        start.setMonth(now.getMonth() - num);
+        break;
+      case 'y':
+        start.setFullYear(now.getFullYear() - num);
+        break;
+    }
+    
+    return { start, end: now };
+  }
+
+  private validatePeriodGroup(period: string, periodGroup: string): void {
+    if (!period) {
+      throw new Error('--periodGroup requires --period to be specified');
+    }
+    
+    const validGroups = ['d', 'w', 'm', 'y'];
+    if (!validGroups.includes(periodGroup)) {
+      throw new Error(`Invalid periodGroup: ${periodGroup}. Use one of: ${validGroups.join(', ')}`);
+    }
+    
+    // Parse period to check compatibility
+    const match = period.match(/^(\d+)([dwmy])$/);
+    if (!match) return;
+    
+    const [, amount, unit] = match;
+    const num = parseInt(amount);
+    
+    // Check hierarchical constraints
+    if (periodGroup === 'w' && unit === 'd' && num < 7) {
+      throw new Error('Cannot group by weeks when period is less than 1 week');
+    }
+    if (periodGroup === 'm' && ((unit === 'd' && num < 30) || (unit === 'w' && num < 4))) {
+      throw new Error('Cannot group by months when period is less than 1 month');
+    }
+    if (periodGroup === 'y' && ((unit === 'd' && num < 365) || (unit === 'w' && num < 52) || (unit === 'm' && num < 12))) {
+      throw new Error('Cannot group by years when period is less than 1 year');
+    }
+  }
+
+  private getGroupKey(date: Date, periodGroup: string): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    
+    switch (periodGroup) {
+      case 'd':
+        return `${year}${month}${day}-Dd`;
+      case 'w':
+        const weekNum = this.getWeekNumber(date);
+        return `${year}-W${String(weekNum).padStart(2, '0')}`;
+      case 'm':
+        return `${year}-${month}M`;
+      case 'y':
+        return `${year}Y`;
+      default:
+        return `${year}${month}${day}`;
+    }
+  }
+
+  private getWeekNumber(date: Date): number {
+    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    const dayNum = d.getUTCDay() || 7;
+    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+  }
+
+  private isSessionInDateRange(sessionFile: string, dateRange: { start: Date; end: Date } | null): boolean {
+    if (!dateRange) return true;
+    
+    try {
+      const content = fs.readFileSync(sessionFile, 'utf8');
+      const lines = content.split('\n').filter(line => line.trim());
+      
+      // Get first message timestamp
+      for (const line of lines) {
+        try {
+          const data = JSON.parse(line);
+          if (data.timestamp) {
+            const sessionDate = new Date(data.timestamp);
+            return sessionDate >= dateRange.start && sessionDate <= dateRange.end;
+          }
+        } catch (e) {
+          continue;
+        }
+      }
+    } catch (error) {
+      this.log(`Error checking session date: ${error.message}`);
+    }
+    
+    return false;
+  }
+
+  // Aggregate by period group
+  private aggregateByPeriod(
+    outputDir: string, 
+    allProjects: string[], 
+    dateRange: { start: Date; end: Date } | null,
+    useNestedStructure: boolean
+  ): ExportResult {
+    const sessionsByGroup = new Map<string, any[]>();
+    let totalMessagesExported = 0;
+    let totalSessionsProcessed = 0;
+    
+    // First, collect all sessions and group them by period
+    allProjects.forEach(projectDir => {
+      const sessions = this.getSessionFiles(projectDir);
+      
+      sessions.forEach(sessionFile => {
+        // Check date range filter
+        if (!this.isSessionInDateRange(sessionFile, dateRange)) return;
+        
+        const sessionData = this.processFullSessionForAggregate(sessionFile);
+        if (!sessionData || sessionData.messages.length === 0) return;
+        
+        // Get first message date for grouping
+        const firstMessageDate = new Date(sessionData.messages[0].timestamp);
+        const groupKey = this.getGroupKey(firstMessageDate, this.options.periodGroup);
+        
+        if (!sessionsByGroup.has(groupKey)) {
+          sessionsByGroup.set(groupKey, []);
+        }
+        
+        sessionsByGroup.get(groupKey)!.push({
+          sessionFile,
+          sessionData,
+          projectPath: this.decodeProjectPath(path.basename(projectDir)),
+          projectName: this.sanitizeFilename(path.basename(this.decodeProjectPath(path.basename(projectDir))))
+        });
+      });
+    });
+    
+    // Now process each group
+    sessionsByGroup.forEach((sessions, groupKey) => {
+      if (useNestedStructure) {
+        // Create nested structure with group folder instead of project folder
+        const groupOutputDir = path.join(outputDir, groupKey);
+        
+        sessions.forEach(({ sessionData, projectName }) => {
+          const sessionId = sessionData.sessionId;
+          const sessionTimestamp = this.extractSessionTimestamp(sessionData);
+          const sessionTitle = this.generateSessionTitle(sessionData);
+          const sessionFolderName = `${sessionTimestamp}-${sessionTitle}-${projectName}`;
+          const sessionOutputDir = path.join(groupOutputDir, sessionFolderName);
+          
+          // Create session directory
+          fs.mkdirSync(sessionOutputDir, { recursive: true });
+          
+          // Export files (same as aggregateNested)
+          this.exportSessionFiles(sessionOutputDir, sessionData, sessionId, projectName);
+          
+          totalMessagesExported += sessionData.messages.length;
+          totalSessionsProcessed++;
+        });
+      } else {
+        // Create flat aggregated file per group
+        const timestamp = this.getTimestamp();
+        const groupData = {
+          groupKey,
+          sessions: sessions.map(s => ({
+            ...s.sessionData,
+            projectName: s.projectName
+          })),
+          totalMessages: sessions.reduce((sum, s) => sum + s.sessionData.messages.length, 0),
+          sessionCount: sessions.length
+        };
+        
+        // Export based on format
+        if (this.options.exportFormat === ExportFormat.JSON) {
+          this.exportGroupJSON(outputDir, groupData, timestamp);
+        } else if (this.options.exportFormat === ExportFormat.TXT) {
+          this.exportGroupTXT(outputDir, groupData, timestamp);
+        } else {
+          this.exportGroupMarkdown(outputDir, groupData, timestamp);
+        }
+        
+        totalMessagesExported += groupData.totalMessages;
+        totalSessionsProcessed += groupData.sessionCount;
+      }
+      
+      console.log(`✓ ${groupKey}: ${sessions.length} sessions`);
+    });
+    
+    console.log(`\nAggregated ${totalSessionsProcessed} sessions (${totalMessagesExported} total messages) grouped by ${this.options.periodGroup}`);
+    
+    return {
+      sessionsExported: totalSessionsProcessed,
+      totalMessages: totalMessagesExported,
+      totalPrompts: totalMessagesExported
+    };
+  }
+
+  private exportSessionFiles(sessionOutputDir: string, sessionData: any, sessionId: string, projectName: string): void {
+    const useMarkdownForAll = this.options.exportFormat === ExportFormat.MARKDOWN;
+    const defaultTextFormat = useMarkdownForAll ? 'md' : 'txt';
+    
+    const prompts = sessionData.messages.filter((m: any) => m.role === 'user');
+    const outputs = sessionData.messages.filter((m: any) => m.role === 'assistant');
+    const fileTimestamp = this.getTimestamp();
+    const sessionTitle = this.generateSessionTitle(sessionData);
+    
+    // Export files
+    if (prompts.length > 0) {
+      const promptsFilename = `prompts-${fileTimestamp}-${sessionTitle}-${sessionId}.md`;
+      const promptsContent = this.formatMessagesAsMarkdown(prompts, 'prompts', sessionId);
+      fs.writeFileSync(path.join(sessionOutputDir, promptsFilename), promptsContent);
+    }
+    
+    if (outputs.length > 0) {
+      const outputsFilename = `outputs-${fileTimestamp}-${sessionTitle}-${sessionId}.${defaultTextFormat}`;
+      const outputsContent = useMarkdownForAll ? 
+        this.formatMessagesAsMarkdown(outputs, 'outputs', sessionId) :
+        this.formatMessagesAsText(outputs, 'outputs', sessionId);
+      fs.writeFileSync(path.join(sessionOutputDir, outputsFilename), outputsContent);
+    }
+    
+    const fullFilename = `full-${fileTimestamp}-${sessionTitle}-${sessionId}.${defaultTextFormat}`;
+    const fullContent = useMarkdownForAll ?
+      this.formatMessagesAsMarkdown(sessionData.messages, 'full', sessionId) :
+      this.formatMessagesAsText(sessionData.messages, 'full', sessionId);
+    fs.writeFileSync(path.join(sessionOutputDir, fullFilename), fullContent);
+    
+    const jsonFilename = `full-${fileTimestamp}-${sessionTitle}-${sessionId}.json`;
+    const jsonContent = {
+      sessionId,
+      projectName,
+      exportTimestamp: new Date().toISOString(),
+      messageCount: sessionData.messages.length,
+      messages: sessionData.messages
+    };
+    fs.writeFileSync(path.join(sessionOutputDir, jsonFilename), JSON.stringify(jsonContent, null, 2));
+  }
+
+  private exportGroupMarkdown(outputDir: string, groupData: any, timestamp: string): void {
+    const filename = `aggregated-${timestamp}-${groupData.groupKey}.md`;
+    let content = `# Aggregated Sessions for ${groupData.groupKey}\n\n`;
+    content += `**Total Sessions**: ${groupData.sessionCount}\n`;
+    content += `**Total Messages**: ${groupData.totalMessages}\n\n`;
+    
+    groupData.sessions.forEach((session: any) => {
+      content += `## ${session.projectName} - Session ${session.sessionId}\n\n`;
+      
+      const prompts = session.messages.filter((m: any) => m.role === 'user');
+      content += `### Prompts (${prompts.length})\n\n`;
+      
+      prompts.forEach((prompt: any, index: number) => {
+        content += `#### Prompt ${index + 1} - ${new Date(prompt.timestamp).toLocaleString()}\n\n`;
+        content += '```\n';
+        content += prompt.content;
+        content += '\n```\n\n';
+      });
+      
+      content += '\n---\n\n';
+    });
+    
+    fs.writeFileSync(path.join(outputDir, filename), content);
+  }
+
+  private exportGroupJSON(outputDir: string, groupData: any, timestamp: string): void {
+    const filename = `aggregated-${timestamp}-${groupData.groupKey}.json`;
+    const jsonData = {
+      groupKey: groupData.groupKey,
+      aggregatedAt: new Date().toISOString(),
+      totalSessions: groupData.sessionCount,
+      totalMessages: groupData.totalMessages,
+      sessions: groupData.sessions
+    };
+    fs.writeFileSync(path.join(outputDir, filename), JSON.stringify(jsonData, null, 2));
+  }
+
+  private exportGroupTXT(outputDir: string, groupData: any, timestamp: string): void {
+    const filename = `aggregated-${timestamp}-${groupData.groupKey}.txt`;
+    let content = `AGGREGATED SESSIONS FOR ${groupData.groupKey}\n`;
+    content += '='.repeat(50) + '\n\n';
+    content += `Total Sessions: ${groupData.sessionCount}\n`;
+    content += `Total Messages: ${groupData.totalMessages}\n\n`;
+    
+    groupData.sessions.forEach((session: any) => {
+      content += '='.repeat(80) + '\n';
+      content += `PROJECT: ${session.projectName}\n`;
+      content += `SESSION: ${session.sessionId}\n`;
+      content += '='.repeat(80) + '\n\n';
+      
+      const prompts = session.messages.filter((m: any) => m.role === 'user');
+      prompts.forEach((prompt: any) => {
+        content += `[${new Date(prompt.timestamp).toLocaleString()}]\n`;
+        content += '-'.repeat(50) + '\n';
+        content += prompt.content + '\n\n';
+      });
+      
+      content += '\n';
+    });
+    
+    fs.writeFileSync(path.join(outputDir, filename), content);
   }
 
   // Static method for CLI version info

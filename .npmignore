@@ -1,0 +1,59 @@
+# Development directories
+.claude/
+.cursorindexingignore
+v1-deprecated/
+memory-bank/
+aggregated-prompts/
+claude-prompts/
+docs/
+
+# Test files
+test/
+*.spec.ts
+*.spec.js
+test-*.js
+jest.config.js
+
+# Import scripts (contain personal data)
+import-*.js
+scan-and-import-all-cursor.js
+find-more-cursor.js
+
+# Local data files
+*.local.md
+CLAUDE.local.md
+SENSITIVE_DATA_AUDIT.md
+
+# Build and development files
+src/
+*.ts
+!*.d.ts
+tsconfig.json
+nest-cli.json
+.eslintrc.js
+.prettierrc
+
+# Environment and config
+.env
+.env.*
+!.env.example
+
+# Git and IDE
+.git/
+.gitignore
+.DS_Store
+*.log
+*.swp
+.idea/
+.vscode/
+
+# Documentation source
+README_OLD.md
+
+# Database migrations (development only)
+migrations/
+
+# Python scripts
+*.py
+setup-embeddings.py
+generate-embeddings.py
