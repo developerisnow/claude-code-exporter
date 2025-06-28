@@ -18,6 +18,8 @@ _v1-deprecated/
 claude-code-exporter-v2/
 memory-bank/
 mcp-exporter/
+submissions/
+.github/
 *.spec.js
 *.spec.ts
 tsconfig.json
@@ -26,3 +28,6 @@ nest-cli.json
 .prettierrc
 CLAUDE.local.md
 SENSITIVE_DATA_AUDIT.md
+CODE_OF_CONDUCT.md
+SECURITY.md
+.eslintrc.json
