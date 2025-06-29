@@ -52,6 +52,17 @@ function decodePath(encodedPath) {
   return parts.join('/');
 }
 
+// Helper function to detect Claude home directories
+function detectClaudeHomes() {
+  const homeDir = process.env.HOME || process.env.USERPROFILE;
+  const candidates = [
+    path.join(homeDir, '.claude'),
+    path.join(homeDir, '.config', 'claude')
+  ];
+  
+  return candidates.filter(dir => fs.existsSync(path.join(dir, 'projects')));
+}
+
 // Create the MCP server
 console.error('MCP Server: Creating server instance...');
 const server = new Server(
@@ -74,7 +85,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
     tools: [
       {
         name: 'export_conversation',
-        description: 'Export Claude Code conversations from a specific project path',
+        description: 'Export Claude Code conversations from a specific project path with advanced filtering options',
         inputSchema: {
           type: 'object',
           properties: {
@@ -101,6 +112,26 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             claudeHome: {
               type: 'string',
               description: 'Claude home directory path (optional)'
+            },
+            period: {
+              type: 'string',
+              pattern: '^\\d+[dwmy]$',
+              description: 'Filter sessions by time period (e.g., 7d, 2w, 3m, 1y)'
+            },
+            periodGroup: {
+              type: 'string',
+              enum: ['d', 'w', 'm', 'y'],
+              description: 'Group sessions by period (day, week, month, year)'
+            },
+            nested: {
+              type: 'boolean',
+              description: 'Create nested directory structure for outputs',
+              default: false
+            },
+            verbose: {
+              type: 'boolean',
+              description: 'Enable verbose logging',
+              default: false
             }
           },
           required: ['projectPath']
@@ -131,6 +162,53 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
               enum: ['project', 'date', 'none'],
               description: 'How to group sessions in the output',
               default: 'project'
+            },
+            bothDirs: {
+              type: 'boolean',
+              description: 'Process both Claude home directories if available',
+              default: false
+            },
+            period: {
+              type: 'string',
+              pattern: '^\\d+[dwmy]$',
+              description: 'Filter sessions by time period (e.g., 7d, 2w, 3m, 1y)'
+            },
+            verbose: {
+              type: 'boolean',
+              description: 'Enable verbose logging',
+              default: false
+            }
+          }
+        }
+      },
+      {
+        name: 'list_sessions',
+        description: 'List available Claude sessions with metadata',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            projectPath: {
+              type: 'string',
+              description: 'Absolute path to the project directory (optional, lists all if not provided)'
+            },
+            claudeHome: {
+              type: 'string',
+              description: 'Claude home directory path (optional)'
+            },
+            bothDirs: {
+              type: 'boolean',
+              description: 'List sessions from both Claude home directories',
+              default: false
+            },
+            period: {
+              type: 'string',
+              pattern: '^\\d+[dwmy]$',
+              description: 'Filter sessions by time period (e.g., 7d, 2w, 3m, 1y)'
+            },
+            verbose: {
+              type: 'boolean',
+              description: 'Include detailed session information',
+              default: false
             }
           }
         }
@@ -151,14 +229,24 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         throw new Error('projectPath is required');
       }
 
-      // Create exporter instance
-      const exporter = new ClaudePromptExporter(args.projectPath, {
-        verbose: false,
+      // Create exporter instance with all options
+      const options = {
+        verbose: args.verbose || false,
         exportMode: args.exportMode || 'prompts',
         exportFormat: args.exportFormat || 'markdown',
         interactive: false,
-        claudeHome: args.claudeHome
-      });
+        claudeHome: args.claudeHome,
+        period: args.period,
+        periodGroup: args.periodGroup,
+        nested: args.nested || false,
+        aggregate: args.nested || false // nested implies aggregate
+      };
+
+      if (args.verbose) {
+        console.error('MCP Server: Export options:', options);
+      }
+
+      const exporter = new ClaudePromptExporter(args.projectPath, options);
 
       // Export the conversation
       const result = exporter.export(args.outputDir || './claude-prompts');
@@ -175,121 +263,134 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                 totalMessages: result.totalMessages,
                 outputDirectory: path.resolve(args.outputDir || './claude-prompts'),
                 exportMode: args.exportMode || 'prompts',
-                exportFormat: args.exportFormat || 'markdown'
+                exportFormat: args.exportFormat || 'markdown',
+                period: args.period,
+                periodGroup: args.periodGroup,
+                nested: args.nested
               }
             }, null, 2)
           }
         ]
       };
     } else if (name === 'aggregate_sessions') {
-      // Detect Claude home
-      const homeDir = process.env.HOME || process.env.USERPROFILE;
-      const claudeHomeCandidates = [
-        args.claudeHome,
-        process.env.CLAUDE_HOME,
-        path.join(homeDir, '.claude'),
-        path.join(homeDir, '.config', 'claude')
-      ].filter(Boolean);
-
-      let claudeHome = null;
-      for (const candidate of claudeHomeCandidates) {
-        if (fs.existsSync(path.join(candidate, 'projects'))) {
-          claudeHome = candidate;
-          break;
-        }
-      }
-
-      if (!claudeHome) {
-        throw new Error('Could not find Claude home directory. Please specify claudeHome parameter.');
-      }
-
-      // Find all projects
-      const projects = findClaudeProjects(claudeHome);
+      // Detect Claude home directories
+      let claudeHomes = [];
       
-      if (projects.length === 0) {
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify({
-                success: false,
-                message: 'No Claude projects found',
-                claudeHome
-              }, null, 2)
-            }
-          ]
-        };
+      if (args.bothDirs) {
+        claudeHomes = detectClaudeHomes();
+        if (claudeHomes.length === 0) {
+          throw new Error('No Claude home directories found');
+        }
+      } else {
+        // Use specified or detect single home
+        const homeDir = process.env.HOME || process.env.USERPROFILE;
+        const claudeHomeCandidates = [
+          args.claudeHome,
+          process.env.CLAUDE_HOME,
+          path.join(homeDir, '.claude'),
+          path.join(homeDir, '.config', 'claude')
+        ].filter(Boolean);
+
+        let claudeHome = null;
+        for (const candidate of claudeHomeCandidates) {
+          if (fs.existsSync(path.join(candidate, 'projects'))) {
+            claudeHome = candidate;
+            break;
+          }
+        }
+
+        if (!claudeHome) {
+          throw new Error('Could not find Claude home directory. Please specify claudeHome parameter.');
+        }
+        
+        claudeHomes = [claudeHome];
       }
 
-      // Aggregate data from all projects
+      // Aggregate data from all Claude homes
       const aggregatedData = {
-        totalProjects: projects.length,
+        totalProjects: 0,
         totalSessions: 0,
         totalMessages: 0,
         totalUserMessages: 0,
         totalAssistantMessages: 0,
         projects: [],
+        claudeHomes: claudeHomes.length,
         exportDate: new Date().toISOString()
       };
 
-      // Process each project
-      for (const project of projects) {
-        try {
-          // Try to decode the project path
-          const decodedPath = decodePath(project.name);
-          
-          // Create exporter for this project
-          const exporter = new ClaudePromptExporter(decodedPath, {
-            verbose: false,
-            exportMode: 'full',
-            exportFormat: 'json',
-            interactive: false,
-            claudeHome
-          });
+      // Process each Claude home
+      for (const claudeHome of claudeHomes) {
+        if (args.verbose) {
+          console.error('MCP Server: Processing Claude home:', claudeHome);
+        }
 
-          // Extract messages
-          const sessions = exporter.extractMessages();
-          
-          if (sessions.length > 0) {
-            const projectData = {
-              name: project.name,
-              decodedPath,
-              sessions: sessions.length,
-              totalMessages: 0,
-              userMessages: 0,
-              assistantMessages: 0,
-              firstActivity: null,
-              lastActivity: null
-            };
-
-            sessions.forEach(session => {
-              projectData.totalMessages += session.messages.length;
-              projectData.userMessages += session.stats.userMessages;
-              projectData.assistantMessages += session.stats.assistantMessages;
-              
-              // Track activity dates
-              if (session.messages.length > 0) {
-                const firstTimestamp = new Date(session.messages[0].timestamp);
-                const lastTimestamp = new Date(session.messages[session.messages.length - 1].timestamp);
-                
-                if (!projectData.firstActivity || firstTimestamp < new Date(projectData.firstActivity)) {
-                  projectData.firstActivity = firstTimestamp.toISOString();
-                }
-                
-                if (!projectData.lastActivity || lastTimestamp > new Date(projectData.lastActivity)) {
-                  projectData.lastActivity = lastTimestamp.toISOString();
-                }
-              }
+        // Find all projects
+        const projects = findClaudeProjects(claudeHome);
+        aggregatedData.totalProjects += projects.length;
+        
+        // Process each project
+        for (const project of projects) {
+          try {
+            // Try to decode the project path
+            const decodedPath = decodePath(project.name);
+            
+            // Create exporter for this project
+            const exporter = new ClaudePromptExporter(decodedPath, {
+              verbose: false,
+              exportMode: 'full',
+              exportFormat: 'json',
+              interactive: false,
+              claudeHome,
+              period: args.period
             });
 
-            aggregatedData.projects.push(projectData);
-            aggregatedData.totalSessions += sessions.length;
-            aggregatedData.totalMessages += projectData.totalMessages;
-            aggregatedData.totalUserMessages += projectData.userMessages;
-            aggregatedData.totalAssistantMessages += projectData.assistantMessages;
+            // Extract messages
+            const sessions = exporter.extractMessages();
+            
+            if (sessions.length > 0) {
+              const projectData = {
+                name: project.name,
+                decodedPath,
+                claudeHome,
+                sessions: sessions.length,
+                totalMessages: 0,
+                userMessages: 0,
+                assistantMessages: 0,
+                firstActivity: null,
+                lastActivity: null
+              };
+
+              sessions.forEach(session => {
+                projectData.totalMessages += session.messages.length;
+                projectData.userMessages += session.stats.userMessages;
+                projectData.assistantMessages += session.stats.assistantMessages;
+                
+                // Track activity dates
+                if (session.messages.length > 0) {
+                  const firstTimestamp = new Date(session.messages[0].timestamp);
+                  const lastTimestamp = new Date(session.messages[session.messages.length - 1].timestamp);
+                  
+                  if (!projectData.firstActivity || firstTimestamp < new Date(projectData.firstActivity)) {
+                    projectData.firstActivity = firstTimestamp.toISOString();
+                  }
+                  
+                  if (!projectData.lastActivity || lastTimestamp > new Date(projectData.lastActivity)) {
+                    projectData.lastActivity = lastTimestamp.toISOString();
+                  }
+                }
+              });
+
+              aggregatedData.projects.push(projectData);
+              aggregatedData.totalSessions += sessions.length;
+              aggregatedData.totalMessages += projectData.totalMessages;
+              aggregatedData.totalUserMessages += projectData.userMessages;
+              aggregatedData.totalAssistantMessages += projectData.assistantMessages;
+            }
+          } catch (error) {
+            if (args.verbose) {
+              console.error('Error processing project:', project.name, error.message);
+            }
           }
-        } catch (error) {
-          console.error('Error processing project:', project.name, error.message);
         }
       }
 
@@ -301,12 +402,19 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       let report = '# Claude Code Sessions Aggregate Report\n\n';
       report += `Generated on: ${new Date().toLocaleString()}\n\n`;
       report += '## Summary\n\n';
+      report += `- **Claude Homes Processed**: ${aggregatedData.claudeHomes}\n`;
       report += `- **Total Projects**: ${aggregatedData.totalProjects}\n`;
       report += `- **Active Projects**: ${aggregatedData.projects.length}\n`;
       report += `- **Total Sessions**: ${aggregatedData.totalSessions}\n`;
       report += `- **Total Messages**: ${aggregatedData.totalMessages}\n`;
       report += `- **User Messages**: ${aggregatedData.totalUserMessages}\n`;
-      report += `- **Assistant Messages**: ${aggregatedData.totalAssistantMessages}\n\n`;
+      report += `- **Assistant Messages**: ${aggregatedData.totalAssistantMessages}\n`;
+      
+      if (args.period) {
+        report += `- **Period Filter**: ${args.period}\n`;
+      }
+      
+      report += '\n';
 
       if (args.includeStats !== false) {
         report += '## Projects Detail\n\n';
@@ -321,6 +429,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
         sortedProjects.forEach((project, index) => {
           report += `### ${index + 1}. ${project.decodedPath}\n\n`;
+          report += `- **Claude Home**: ${project.claudeHome}\n`;
           report += `- **Sessions**: ${project.sessions}\n`;
           report += `- **Total Messages**: ${project.totalMessages}\n`;
           report += `- **User Messages**: ${project.userMessages}\n`;
@@ -346,12 +455,156 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
               success: true,
               message: `Successfully aggregated ${aggregatedData.totalSessions} sessions from ${aggregatedData.projects.length} active projects`,
               details: {
+                claudeHomes: aggregatedData.claudeHomes,
                 totalProjects: aggregatedData.totalProjects,
                 activeProjects: aggregatedData.projects.length,
                 totalSessions: aggregatedData.totalSessions,
                 totalMessages: aggregatedData.totalMessages,
                 reportPath,
-                jsonPath
+                jsonPath,
+                period: args.period,
+                bothDirs: args.bothDirs
+              }
+            }, null, 2)
+          }
+        ]
+      };
+    } else if (name === 'list_sessions') {
+      // Detect Claude home directories
+      let claudeHomes = [];
+      
+      if (args.bothDirs) {
+        claudeHomes = detectClaudeHomes();
+        if (claudeHomes.length === 0) {
+          throw new Error('No Claude home directories found');
+        }
+      } else {
+        // Use specified or detect single home
+        const homeDir = process.env.HOME || process.env.USERPROFILE;
+        const claudeHomeCandidates = [
+          args.claudeHome,
+          process.env.CLAUDE_HOME,
+          path.join(homeDir, '.claude'),
+          path.join(homeDir, '.config', 'claude')
+        ].filter(Boolean);
+
+        let claudeHome = null;
+        for (const candidate of claudeHomeCandidates) {
+          if (fs.existsSync(path.join(candidate, 'projects'))) {
+            claudeHome = candidate;
+            break;
+          }
+        }
+
+        if (!claudeHome) {
+          throw new Error('Could not find Claude home directory. Please specify claudeHome parameter.');
+        }
+        
+        claudeHomes = [claudeHome];
+      }
+
+      const allSessions = [];
+
+      // Process each Claude home
+      for (const claudeHome of claudeHomes) {
+        if (args.verbose) {
+          console.error('MCP Server: Listing sessions from:', claudeHome);
+        }
+
+        if (args.projectPath) {
+          // List sessions for specific project
+          try {
+            const exporter = new ClaudePromptExporter(args.projectPath, {
+              verbose: false,
+              exportMode: 'full',
+              exportFormat: 'json',
+              interactive: false,
+              claudeHome,
+              period: args.period
+            });
+
+            const sessions = exporter.extractMessages();
+            sessions.forEach(session => {
+              allSessions.push({
+                projectPath: args.projectPath,
+                claudeHome,
+                sessionId: session.sessionId,
+                title: session.title,
+                messageCount: session.messages.length,
+                userMessages: session.stats.userMessages,
+                assistantMessages: session.stats.assistantMessages,
+                lastActivity: session.lastActivity,
+                firstMessage: session.messages[0]?.timestamp,
+                lastMessage: session.messages[session.messages.length - 1]?.timestamp
+              });
+            });
+          } catch (error) {
+            if (args.verbose) {
+              console.error('Error listing sessions for project:', args.projectPath, error.message);
+            }
+          }
+        } else {
+          // List all sessions across all projects
+          const projects = findClaudeProjects(claudeHome);
+          
+          for (const project of projects) {
+            try {
+              const decodedPath = decodePath(project.name);
+              const exporter = new ClaudePromptExporter(decodedPath, {
+                verbose: false,
+                exportMode: 'full',
+                exportFormat: 'json',
+                interactive: false,
+                claudeHome,
+                period: args.period
+              });
+
+              const sessions = exporter.extractMessages();
+              sessions.forEach(session => {
+                allSessions.push({
+                  projectPath: decodedPath,
+                  projectName: project.name,
+                  claudeHome,
+                  sessionId: session.sessionId,
+                  title: session.title,
+                  messageCount: session.messages.length,
+                  userMessages: session.stats.userMessages,
+                  assistantMessages: session.stats.assistantMessages,
+                  lastActivity: session.lastActivity,
+                  firstMessage: session.messages[0]?.timestamp,
+                  lastMessage: session.messages[session.messages.length - 1]?.timestamp
+                });
+              });
+            } catch (error) {
+              if (args.verbose) {
+                console.error('Error processing project:', project.name, error.message);
+              }
+            }
+          }
+        }
+      }
+
+      // Sort sessions by last activity
+      allSessions.sort((a, b) => new Date(b.lastActivity) - new Date(a.lastActivity));
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              success: true,
+              message: `Found ${allSessions.length} sessions`,
+              details: {
+                sessionCount: allSessions.length,
+                claudeHomes: claudeHomes.length,
+                period: args.period,
+                sessions: args.verbose ? allSessions : allSessions.map(s => ({
+                  sessionId: s.sessionId,
+                  title: s.title,
+                  project: s.projectPath,
+                  messages: s.messageCount,
+                  lastActivity: s.lastActivity
+                }))
               }
             }, null, 2)
           }
@@ -369,7 +622,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           text: JSON.stringify({
             success: false,
             error: error.message,
-            stack: error.stack
+            stack: error.stack,
+            tool: name,
+            parameters: args
           }, null, 2)
         }
       ],

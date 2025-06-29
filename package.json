@@ -5,6 +5,7 @@
   "main": "lib/index.js",
   "bin": {
     "claude-prompts": "bin/claude-prompts",
+    "claude-export": "bin/claude-prompts",
     "claude-mcp": "mcp/server.js"
   },
   "scripts": {
