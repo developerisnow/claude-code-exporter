@@ -199,9 +199,44 @@ npm install -g claude-code-exporter
 }
 ```
 
-3. Restart Claude Desktop and use tools:
-- "Use export_conversation to export my project at /path/to/project"
-- "Use aggregate_sessions to analyze all my Claude sessions"
+3. Restart Claude Desktop and use the available tools:
+
+### Available MCP Tools
+
+#### 📤 `export_conversation`
+Export Claude Code conversations with advanced filtering:
+- **projectPath** (required): Project directory path
+- **outputDir**: Output directory (default: ./claude-prompts)
+- **exportMode**: "prompts", "full", or "outputs"
+- **exportFormat**: "markdown", "json", or "both"
+- **period**: Time filter (e.g., "7d", "2w", "3m", "1y")
+- **periodGroup**: Group by "d", "w", "m", or "y"
+- **nested**: Create nested directory structure
+- **verbose**: Enable detailed logging
+
+Example: "Export my project at /path/to/project with period 7d and nested structure"
+
+#### 📊 `aggregate_sessions`
+Aggregate sessions across multiple projects:
+- **claudeHome**: Claude home directory (auto-detected)
+- **outputDir**: Output directory (default: ./aggregated-prompts)
+- **includeStats**: Include detailed statistics
+- **groupBy**: "project", "date", or "none"
+- **bothDirs**: Process both Claude directories
+- **period**: Time filter (e.g., "7d", "2w", "3m")
+- **verbose**: Enable detailed logging
+
+Example: "Aggregate all my Claude sessions from the last 2 weeks with bothDirs enabled"
+
+#### 📋 `list_sessions`
+List available Claude sessions with metadata:
+- **projectPath**: Specific project (optional, lists all if omitted)
+- **claudeHome**: Claude home directory (auto-detected)
+- **bothDirs**: List from both Claude directories
+- **period**: Time filter (e.g., "7d", "2w", "3m")
+- **verbose**: Include detailed session information
+
+Example: "List all my Claude sessions from the last 7 days with verbose details"
 
 ## 🔧 Programmatic API
 
@@ -228,7 +263,7 @@ const result = await exporter.aggregate('./aggregated-output');
 ## ⚙️ Configuration
 
 ### Requirements
-- **Node.js**: v14.0.0 or higher
+- **Node.js**: v20.0.0 or higher (required for MCP server)
 - **Claude Code**: Installed with sessions in standard directories
 
 ### Environment

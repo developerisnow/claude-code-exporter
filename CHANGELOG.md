@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.2] - 2025-06-29
+
+### Added
+- 🚀 **Full MCP Feature Parity** - All CLI features now available in MCP server
+- 📅 **MCP Period Filtering** - Filter sessions by time period in MCP tools
+- 🗓️ **MCP Period Grouping** - Group exports by day/week/month/year in MCP
+- 📁 **MCP Nested Structure** - Create organized folder hierarchy via MCP
+- 🏠 **MCP Both Directories** - Process both Claude configs in MCP tools
+- 📋 **New MCP Tool: list_sessions** - List available sessions with metadata
+- 🔍 **MCP Verbose Logging** - Detailed logging for all MCP operations
+- 🔗 **NPM Alias** - Added `claude-export` as alias for `claude-prompts`
+
+### Changed
+- 📦 **Node.js Requirement** - Updated to v20.0.0+ for MCP compatibility
+- 🛠️ **MCP Error Handling** - Improved error messages with parameter details
+- 📝 **Documentation** - Comprehensive MCP tools documentation in README
+
+### Fixed
+- 🐛 **MCP Node.js Version** - Fixed compatibility with Claude Desktop (Node.js 20)
+- 🔧 **MCP Path Detection** - Improved project path resolution in MCP server
+
 ## [2.0.1] - 2025-06-28
 
 ### Added

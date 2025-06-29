@@ -1,6 +1,6 @@
 {
   "name": "claude-code-exporter",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "Export Claude Code conversations with CLI and MCP server support for Claude Desktop integration",
   "main": "lib/index.js",
   "bin": {
