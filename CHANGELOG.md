@@ -21,10 +21,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 📦 **Node.js Requirement** - Updated to v20.0.0+ for MCP compatibility
 - 🛠️ **MCP Error Handling** - Improved error messages with parameter details
 - 📝 **Documentation** - Comprehensive MCP tools documentation in README
+- 📄 **Output Format** - Use .txt for full/outputs modes, .md for prompts only
 
 ### Fixed
 - 🐛 **MCP Node.js Version** - Fixed compatibility with Claude Desktop (Node.js 20)
 - 🔧 **MCP Path Detection** - Improved project path resolution in MCP server
+- ✅ **NPM CLI Features** - Implemented missing period, aggregate, nested features
+- 🔄 **Both Configs Default** - CLI now processes both configs by default in aggregate mode
+- 🎯 **Argument Parsing** - Support for both `--option=value` and `--option value` syntax
 
 ## [2.0.1] - 2025-06-28
 
