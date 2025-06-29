@@ -158,8 +158,9 @@ function parseArgs(args) {
   if (positionalArgs.length > 0) {
     options.projectPath = positionalArgs[0];
   } else {
-    // Default to aggregate mode when no project path provided
+    // Default to aggregate + nested mode when no project path provided
     options.aggregate = true;
+    options.nested = true;
     options.bothDirs = true;
   }
   if (positionalArgs.length > 1) {
