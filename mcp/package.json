@@ -1,0 +1,8 @@
+{
+  "name": "claude-code-exporter-mcp",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "MCP server for Claude Code Exporter",
+  "main": "server.js",
+  "private": true
+}

@@ -14,8 +14,16 @@ import { dirname } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+console.error('MCP Server: Starting...');
+console.error('MCP Server: Node version:', process.version);
+console.error('MCP Server: Script path:', __filename);
+
+console.error('MCP Server: Imports successful');
+
 // Import the existing exporter functionality
 import ClaudePromptExporter from './exporter-wrapper.js';
+
+console.error('MCP Server: ClaudePromptExporter imported');
 
 // Helper function to find Claude projects
 function findClaudeProjects(claudeHome) {
@@ -45,6 +53,7 @@ function decodePath(encodedPath) {
 }
 
 // Create the MCP server
+console.error('MCP Server: Creating server instance...');
 const server = new Server(
   {
     name: 'claude-code-exporter-mcp',
@@ -56,9 +65,11 @@ const server = new Server(
     },
   }
 );
+console.error('MCP Server: Server instance created');
 
 // Define available tools
 server.setRequestHandler(ListToolsRequestSchema, async () => {
+  console.error('MCP Server: Received ListToolsRequest');
   return {
     tools: [
       {
@@ -131,6 +142,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
 // Handle tool execution
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params;
+  console.error('MCP Server: Received CallToolRequest:', name);
 
   try {
     if (name === 'export_conversation') {
@@ -349,6 +361,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       throw new Error(`Unknown tool: ${name}`);
     }
   } catch (error) {
+    console.error('MCP Server: Error executing tool:', error);
     return {
       content: [
         {
@@ -365,14 +378,35 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   }
 });
 
-// Start the server
-async function main() {
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
-  console.error('Claude Code Exporter MCP Server running on stdio');
-}
-
-main().catch((error) => {
-  console.error('Fatal error in main():', error);
+// Handle uncaught errors
+process.on('uncaughtException', (error) => {
+  console.error('MCP Server: Uncaught exception:', error);
   process.exit(1);
 });
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('MCP Server: Unhandled rejection at:', promise, 'reason:', reason);
+  process.exit(1);
+});
+
+// Start the server
+async function main() {
+  try {
+    console.error('MCP Server: Creating transport...');
+    const transport = new StdioServerTransport();
+    
+    console.error('MCP Server: Connecting to transport...');
+    await server.connect(transport);
+    
+    console.error('Claude Code Exporter MCP Server running on stdio');
+    
+    // Keep the process alive
+    process.stdin.resume();
+  } catch (error) {
+    console.error('MCP Server: Fatal error in main():', error);
+    process.exit(1);
+  }
+}
+
+console.error('MCP Server: Calling main()...');
+main();
